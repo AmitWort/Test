@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="UTF-8">
+<title>מערכת תורים</title>
+<style>
+body {
+  font-family: Arial;
+  background: linear-gradient(135deg, #74ebd5, #ACB6E5);
+  margin: 0;
+}
+
+h1 {
+  text-align: center;
+  color: white;
+  margin-top: 20px;
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 40px;
+  flex-wrap: wrap;
+}
+
+.card {
+  background: white;
+  padding: 25px;
+  width: 250px;
+  border-radius: 15px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  text-align: center;
+}
+
+button {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 12px;
+  margin-top: 10px;
+  width: 100%;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #2980b9;
+}
+
+.number {
+  font-size: 28px;
+  margin-top: 15px;
+  color: #2c3e50;
+  font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<h1>🏥 מערכת תורים לרופא</h1>
+
+<div class="container">
+
+  <div class="card">
+    <h2>קח מספר</h2>
+    <button onclick="takeNumber()">קבל תור</button>
+    <div id="myNumber" class="number">--</div>
+  </div>
+
+  <div class="card">
+    <h2>תור נוכחי</h2>
+    <div id="current" class="number">0</div>
+    <button onclick="nextNumber()">הבא</button>
+  </div>
+
+</div>
+
+<script>
+let currentNumber = 0;
+let nowServing = 0;
+
+function speak(text) {
+  let msg = new SpeechSynthesisUtterance(text);
+  msg.lang = "he-IL"; // עברית
+  speechSynthesis.speak(msg);
+}
+
+function takeNumber() {
+  currentNumber++;
+  document.getElementById("myNumber").innerText = currentNumber;
+}
+
+function nextNumber() {
+  if (nowServing < currentNumber) {
+    nowServing++;
+    document.getElementById("current").innerText = nowServing;
+
+    // הכרזה קולית
+    speak("מספר " + nowServing + " נא להיכנס");
+  }
+}
+</script>
+
+</body>
+</html>
