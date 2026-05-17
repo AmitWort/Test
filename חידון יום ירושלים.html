@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>חידון ירושלים</title>
+
+<style>
+body{
+font-family:Arial;
+background:linear-gradient(#0066cc,#ffffff);
+text-align:center;
+padding:20px;
+color:#222;
+}
+
+.game{
+background:white;
+max-width:850px;
+margin:auto;
+padding:25px;
+border-radius:25px;
+box-shadow:0 0 20px gray;
+animation:fade 1s;
+}
+
+@keyframes fade{
+from{opacity:0;transform:scale(0.9);}
+to{opacity:1;transform:scale(1);}
+}
+
+button{
+display:block;
+width:90%;
+margin:12px auto;
+padding:15px;
+font-size:18px;
+border:none;
+border-radius:12px;
+cursor:pointer;
+background:#1976d2;
+color:white;
+transition:0.3s;
+}
+
+button:hover{
+background:#004ba0;
+transform:scale(1.05);
+}
+
+#timer{
+font-size:28px;
+color:red;
+font-weight:bold;
+}
+
+#score{
+font-size:22px;
+color:green;
+}
+
+#message{
+font-size:26px;
+margin:15px;
+font-weight:bold;
+}
+
+.hidden{
+display:none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="game">
+
+<h1>🏰 חידון ירושלים והצנחנים 🪂</h1>
+
+<div id="score">ניקוד: 0</div>
+<div id="timer">20</div>
+
+<h2 id="question"></h2>
+
+<div id="answers"></div>
+
+<div id="message"></div>
+
+<div id="win" class="hidden">
+<h1>🏆 כל הכבוד!</h1>
+<h2>סיימת את המשחק!</h2>
+<h2 id="finalScore"></h2>
+<h2 id="highScore"></h2>
+<button onclick="restart()">🔄 שחק שוב</button>
+</div>
+
+</div>
+
+<audio id="correct" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+<audio id="wrong" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
+
+<script>
+
+const questions = [
+
+{
+q:"מהו החלק הראשון של השיר?",
+a:["היציאה לקרב והלחימה בירושלים","טיול בעיר","חופשה"],
+c:0
+},
+
+{
+q:"מהו החלק השני של השיר?",
+a:["שמחה גדולה","הכאב והאבל על החברים שנפלו","קניות בירושלים"],
+c:1
+},
+
+{
+q:"למה הצנחנים בכו?",
+a:["כי ירד גשם","כי היו עייפים ונלחמו למען ירושלים","כי איבדו מפה"],
+c:1
+},
+
+{
+q:"מה מסמל הכותל בשיר?",
+a:["שייכות, קדושה והתרגשות","אוכל","תחנת אוטובוס"],
+c:0
+},
+
+{
+q:"מהי האנשה?",
+a:["כאשר לדומם יש רגשות כמו אדם","כלי מלחמה","עיר בישראל"],
+c:0
+}
+
+];
+
+let current=0;
+let score=0;
+let time=20;
+let timer;
+
+function loadQuestion(){
+
+if(current>=questions.length){
+endGame();
+return;
+}
+
+clearInterval(timer);
+
+time=20;
+document.getElementById("timer").innerText=time;
+
+timer=setInterval(()=>{
+time--;
+document.getElementById("timer").innerText=time;
+
+if(time<=0){
+current++;
+loadQuestion();
+}
+
+},1000);
+
+let q=questions[current];
+
+document.getElementById("question").innerText=q.q;
+
+let html="";
+
+q.a.forEach((ans,index)=>{
+
+html+=`<button onclick="check(${index})">${ans}</button>`;
+
+});
+
+document.getElementById("answers").innerHTML=html;
+}
+
+function check(choice){
+
+let q=questions[current];
+
+if(choice===q.c){
+
+score++;
+document.getElementById("correct").play();
+document.getElementById("message").innerHTML="✅ נכון!";
+}
+else{
+
+document.getElementById("wrong").play();
+document.getElementById("message").innerHTML="❌ לא נכון!";
+}
+
+document.getElementById("score").innerText="ניקוד: "+score;
+
+current++;
+
+setTimeout(()=>{
+document.getElementById("message").innerHTML="";
+loadQuestion();
+},1000);
+}
+
+function endGame(){
+
+clearInterval(timer);
+
+document.getElementById("question").style.display="none";
+document.getElementById("answers").style.display="none";
+document.getElementById("timer").style.display="none";
+
+document.getElementById("win").classList.remove("hidden");
+
+document.getElementById("finalScore").innerText=
+"ציון: "+score+" מתוך "+questions.length;
+
+let high=localStorage.getItem("highscore") || 0;
+
+if(score>high){
+localStorage.setItem("highscore",score);
+high=score;
+}
+
+document.getElementById("highScore").innerText=
+"🏅 שיא אישי: "+high;
+}
+
+function restart(){
+
+location.reload();
+
+}
+
+loadQuestion();
+
+</script>
+
+</body>
+</html>
