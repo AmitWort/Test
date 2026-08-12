@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>המסעדה הביתית</title>
+<style>
+body{margin:0;font-family:Arial;background:#f7f1e8;color:#2d211b}
+header{background:#713d25;color:#fff;text-align:center;padding:25px}
+nav button,.btn{border:0;border-radius:8px;padding:11px 16px;margin:4px;cursor:pointer}
+nav button{background:#fff;color:#713d25}
+.hero{text-align:center;padding:55px 20px;background:#ead7c2}
+.hero h1{font-size:42px}.btn{background:#713d25;color:#fff}
+section{padding:35px 18px}.title{text-align:center}
+.menu{max-width:900px;margin:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px}
+.card,.box,.order{background:#fff;border-radius:14px;padding:20px;box-shadow:0 3px 10px #0002}
+.card{text-align:center}.icon{font-size:55px}
+input,textarea{width:100%;padding:12px;margin:7px 0;box-sizing:border-box;border:1px solid #ccc;border-radius:8px}
+textarea{height:80px}
+#admin{background:#28211d;color:#fff}
+.order{color:#222;margin:15px auto;max-width:800px}
+.order button{border:0;border-radius:7px;padding:9px;margin:3px;cursor:pointer}
+.delete{background:#d32f2f!important;color:#fff}
+.status{padding:8px;background:#ffe082;border-radius:7px}
+footer{background:#17110d;color:#fff;text-align:center;padding:25px}
+</style>
+</head>
+<body>
+
+<header>
+<h1>🍲 המסעדה הביתית</h1>
+<p>אוכל ביתי באהבה ❤️</p>
+<nav>
+<button onclick="go('home')">🏠 בית</button>
+<button onclick="go('menu')">🍽️ תפריט</button>
+<button onclick="go('order')">🛒 הזמנה</button>
+<button onclick="go('admin')">🔐 ניהול</button>
+</nav>
+</header>
+
+<div class="hero" id="home">
+<h1>ברוכים הבאים!</h1>
+<p>אוכל ביתי טרי וטעים</p>
+<button class="btn" onclick="go('menu')">לתפריט</button>
+</div>
+
+<section id="menu">
+<h2 class="title">🍽️ התפריט</h2>
+<div class="menu">
+<div class="card"><div class="icon">🍲</div><h3>מרק ירקות</h3><p>מרק ביתי חם</p><button class="btn" onclick="add('מרק ירקות')">הוסף</button></div>
+<div class="card"><div class="icon">🍗</div><h3>עוף בתנור</h3><p>עוף עם תבלינים</p><button class="btn" onclick="add('עוף בתנור')">הוסף</button></div>
+<div class="card"><div class="icon">🍝</div><h3>פסטה</h3><p>פסטה ברוטב</p><button class="btn" onclick="add('פסטה')">הוסף</button></div>
+<div class="card"><div class="icon">🥗</div><h3>סלט הבית</h3><p>סלט ירקות טרי</p><button class="btn" onclick="add('סלט הבית')">הוסף</button></div>
+<div class="card"><div class="icon">🍕</div><h3>פיצה ביתית</h3><p>פיצה חמה</p><button class="btn" onclick="add('פיצה ביתית')">הוסף</button></div>
+<div class="card"><div class="icon">🍰</div><h3>עוגה ביתית</h3><p>עוגה טרייה</p><button class="btn" onclick="add('עוגה ביתית')">הוסף</button></div>
+</div>
+</section>
+
+<section id="order">
+<h2 class="title">🛒 ההזמנה שלי</h2>
+<div class="box">
+<div id="cart">הסל ריק.</div>
+<hr>
+<input id="name" placeholder="שם מלא">
+<input id="phone" placeholder="טלפון">
+<input id="address" placeholder="כתובת">
+<textarea id="notes" placeholder="הערות"></textarea>
+<button class="btn" style="width:100%" onclick="send()">✅ שליחת הזמנה</button>
+</div>
+</section>
+
+<section id="admin">
+<h2 class="title">🔐 ניהול הזמנות</h2>
+
+<div id="login" class="box" style="max-width:350px;margin:auto;text-align:center">
+<h3>כניסה למנהל</h3>
+<p>קוד: 123</p>
+<input id="code" type="password" placeholder="הזן קוד">
+<button class="btn" onclick="login()">כניסה</button>
+<p id="err"></p>
+</div>
+
+<div id="panel" style="display:none;max-width:900px;margin:auto">
+<button class="btn" onclick="logout()">יציאה</button>
+<button class="delete" onclick="deleteAll()">🗑️ מחק את כל ההזמנות</button>
+<h3>📋 ההזמנות</h3>
+<div id="orders"></div>
+</div>
+</section>
+
+<footer>🍲 המסעדה הביתית ❤️</footer>
+
+<script>
+var cart=[];
+
+function go(id){
+  document.getElementById(id).scrollIntoView({behavior:"smooth"});
+}
+
+function add(food){
+  cart.push(food);
+  renderCart();
+  alert("נוסף להזמנה: "+food);
+}
+
+function renderCart(){
+  var el=document.getElementById("cart");
+  if(cart.length===0){el.innerHTML="הסל ריק.";return;}
+  el.innerHTML="";
+  cart.forEach(function(food,i){
+    var row=document.createElement("div");
+    row.style.padding="10px";
+    row.style.borderBottom="1px solid #ddd";
+    row.innerHTML="🍽️ "+food+" ";
+    var b=document.createElement("button");
+    b.className="delete";
+    b.textContent="הסר";
+    b.onclick=function(){cart.splice(i,1);renderCart();};
+    row.appendChild(b);
+    el.appendChild(row);
+  });
+}
+
+function send(){
+  if(cart.length===0){alert("הוסף מנה להזמנה.");return;}
+  var name=document.getElementById("name").value.trim();
+  var phone=document.getElementById("phone").value.trim();
+  var address=document.getElementById("address").value.trim();
+  var notes=document.getElementById("notes").value.trim();
+
+  if(!name||!phone||!address){
+    alert("מלא שם, טלפון וכתובת.");
+    return;
+  }
+
+  var orders=JSON.parse(localStorage.getItem("orders_v2")||"[]");
+  orders.push({
+    name:name,phone:phone,address:address,notes:notes,
+    foods:cart.slice(),status:"חדשה"
+  });
+  localStorage.setItem("orders_v2",JSON.stringify(orders));
+
+  cart=[];
+  renderCart();
+  document.getElementById("name").value="";
+  document.getElementById("phone").value="";
+  document.getElementById("address").value="";
+  document.getElementById("notes").value="";
+  alert("🎉 ההזמנה התקבלה!");
+}
+
+function login(){
+  if(document.getElementById("code").value==="123"){
+    document.getElementById("login").style.display="none";
+    document.getElementById("panel").style.display="block";
+    document.getElementById("err").textContent="";
+    renderOrders();
+  }else{
+    document.getElementById("err").textContent="❌ קוד שגוי";
+  }
+}
+
+function logout(){
+  document.getElementById("login").style.display="block";
+  document.getElementById("panel").style.display="none";
+  document.getElementById("code").value="";
+}
+
+function renderOrders(){
+  var el=document.getElementById("orders");
+  var orders=JSON.parse(localStorage.getItem("orders_v2")||"[]");
+
+  if(orders.length===0){
+    el.innerHTML="<p>אין הזמנות.</p>";
+    return;
+  }
+
+  el.innerHTML="";
+  orders.forEach(function(o,i){
+    var box=document.createElement("div");
+    box.className="order";
+
+    var title=document.createElement("h3");
+    title.textContent="🧾 הזמנה "+(i+1);
+    box.appendChild(title);
+
+    addText(box,"👤 "+o.name);
+    addText(box,"📱 "+o.phone);
+    addText(box,"📍 "+o.address);
+    addText(box,"🍽️ "+o.foods.join(", "));
+    addText(box,"💬 "+(o.notes||"אין הערות"));
+
+    var status=document.createElement("div");
+    status.className="status";
+    status.textContent="מצב: "+o.status;
+    box.appendChild(status);
+
+    addStatusButton(box,i,"🆕 חדשה","חדשה");
+    addStatusButton(box,i,"🍳 בהכנה","בהכנה");
+    addStatusButton(box,i,"✅ מוכנה","מוכנה");
+    addStatusButton(box,i,"📦 נמסרה","נמסרה");
+
+    var del=document.createElement("button");
+    del.className="delete";
+    del.textContent="🗑️ מחק הזמנה "+(i+1);
+    del.onclick=function(){deleteOne(i);};
+    box.appendChild(del);
+
+    el.appendChild(box);
+  });
+}
+
+function addText(parent,text){
+  var p=document.createElement("p");
+  p.textContent=text;
+  parent.appendChild(p);
+}
+
+function addStatusButton(parent,index,text,status){
+  var b=document.createElement("button");
+  b.textContent=text;
+  b.onclick=function(){setStatus(index,status);};
+  parent.appendChild(b);
+}
+
+function deleteOne(index){
+  var orders=JSON.parse(localStorage.getItem("orders_v2")||"[]");
+  if(!orders[index]) return;
+
+  if(!confirm("למחוק את הזמנה "+(index+1)+"?")) return;
+
+  orders.splice(index,1);
+  localStorage.setItem("orders_v2",JSON.stringify(orders));
+  renderOrders();
+}
+
+function deleteAll(){
+  var orders=JSON.parse(localStorage.getItem("orders_v2")||"[]");
+  if(orders.length===0){alert("אין הזמנות.");return;}
+
+  if(!confirm("למחוק את כל ההזמנות?")) return;
+
+  localStorage.removeItem("orders_v2");
+  renderOrders();
+}
+
+function setStatus(index,status){
+  var orders=JSON.parse(localStorage.getItem("orders_v2")||"[]");
+  if(!orders[index]) return;
+  orders[index].status=status;
+  localStorage.setItem("orders_v2",JSON.stringify(orders));
+  renderOrders();
+}
+
+renderCart();
+</script>
+</body>
+</html>
