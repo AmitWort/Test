@@ -1,0 +1,504 @@
+
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>חגי תשרי - משחק טריוויה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream: #F6EFDE;
+    --parchment: #EFE4C9;
+    --ink: #2B2118;
+    --pomegranate: #A11D33;
+    --pomegranate-dark: #7A1327;
+    --honey: #D9A441;
+    --honey-dark: #A9781F;
+    --olive: #5B7553;
+    --olive-dark: #3E5238;
+    --indigo: #2B3A55;
+    --indigo-dark: #1B2739;
+    --purple: #5C3A63;
+    --purple-dark: #3E2745;
+    --card-shadow: 0 10px 30px rgba(43,33,24,0.18);
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background: var(--cream);
+    font-family: 'Heebo', sans-serif;
+    color: var(--ink);
+  }
+  body{
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(161,29,51,0.06) 0%, transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(91,117,83,0.08) 0%, transparent 45%);
+    padding: 32px 16px 60px;
+  }
+  h1,h2,h3{ font-family: 'Frank Ruhl Libre', serif; margin:0; }
+  .wrap{ max-width: 640px; margin: 0 auto; }
+
+  /* HEADER */
+  .top{ text-align:center; margin-bottom: 22px; }
+  .top .kicker{ font-size: 14px; letter-spacing: 0.5px; color: var(--pomegranate-dark); font-weight:500; margin-bottom:6px; }
+  .top h1{ font-size: 34px; font-weight: 900; color: var(--ink); line-height:1.2; }
+  .top p{ font-size: 15px; color: #5c5346; margin-top:8px; }
+
+  /* SEED PROGRESS */
+  .seeds{ display:flex; justify-content:center; gap:7px; margin: 22px 0 26px; flex-wrap: wrap; }
+  .seed{
+    width: 16px; height: 20px; border-radius: 60% 60% 65% 65% / 70% 70% 55% 55%;
+    background: #e3d8ba; border: 1px solid #d3c49b;
+    transition: background 0.35s ease, border-color 0.35s ease, transform 0.3s ease;
+  }
+  .seed.filled{ background: var(--pomegranate); border-color: var(--pomegranate-dark); transform: scale(1.08); }
+  .seed.filled.wrong{ background: #8a8578; border-color: #6f6b60; }
+
+  /* SCREENS */
+  .screen{ display:none; }
+  .screen.active{ display:block; }
+
+  /* INTRO CARD */
+  .intro-card{
+    background: var(--parchment);
+    border: 1px solid #ddcda0;
+    border-radius: 18px;
+    padding: 28px 24px;
+    box-shadow: var(--card-shadow);
+    text-align:center;
+  }
+  .intro-card .holidays-row{
+    display:flex; justify-content:center; gap:14px; margin: 18px 0 20px; flex-wrap:wrap;
+  }
+  .holiday-chip{
+    background: var(--cream);
+    border: 1px solid #ddcda0;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    min-width: 78px;
+  }
+  .holiday-chip .num{ display:block; font-family:'Frank Ruhl Libre',serif; font-size:20px; font-weight:700; color: var(--pomegranate-dark); margin-bottom:2px; }
+
+  button.primary-btn{
+    appearance:none; border:none; cursor:pointer;
+    background: var(--pomegranate);
+    color: #fff;
+    font-family:'Heebo', sans-serif;
+    font-weight:700;
+    font-size: 17px;
+    padding: 14px 30px;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(161,29,51,0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  button.primary-btn:hover{ transform: translateY(-2px); box-shadow: 0 8px 20px rgba(161,29,51,0.42); }
+  button.primary-btn:active{ transform: translateY(0px) scale(0.98); }
+  button.ghost-btn{
+    appearance:none; cursor:pointer;
+    background: transparent;
+    border: 1.5px solid var(--ink);
+    color: var(--ink);
+    font-family:'Heebo', sans-serif;
+    font-weight: 500;
+    font-size: 15px;
+    padding: 10px 22px;
+    border-radius: 10px;
+  }
+
+  /* ROUND BANNER */
+  .round-banner{
+    display:flex; align-items:center; gap:12px;
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin-bottom: 18px;
+    color:#fff;
+  }
+  .round-banner .icon{ font-size: 26px; line-height:1; }
+  .round-banner .label{ font-size:12px; opacity:0.85; font-weight:500; }
+  .round-banner .title{ font-family:'Frank Ruhl Libre',serif; font-size:20px; font-weight:700; }
+
+  .theme-rh   { background: linear-gradient(135deg, var(--pomegranate), var(--pomegranate-dark)); }
+  .theme-yk   { background: linear-gradient(135deg, var(--indigo), var(--indigo-dark)); }
+  .theme-suk  { background: linear-gradient(135deg, var(--olive), var(--olive-dark)); }
+  .theme-st   { background: linear-gradient(135deg, var(--purple), var(--purple-dark)); }
+
+  /* QUESTION CARD */
+  .q-card{
+    background: #fff;
+    border-radius: 18px;
+    padding: 26px 22px;
+    box-shadow: var(--card-shadow);
+    border: 1px solid #eadfc4;
+  }
+  .q-count{ font-size: 13px; color: #8a8072; margin-bottom: 8px; font-weight:500; }
+  .q-text{ font-size: 20px; font-weight: 700; line-height:1.45; margin-bottom: 22px; font-family:'Frank Ruhl Libre', serif; }
+
+  .options{ display:flex; flex-direction:column; gap:11px; }
+  .opt{
+    text-align:right;
+    background: var(--cream);
+    border: 1.5px solid #e2d5b4;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 16px;
+    font-family:'Heebo', sans-serif;
+    cursor:pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+  }
+  .opt:hover:not(.locked){ border-color: var(--pomegranate); background:#fbf3e4; }
+  .opt.correct{ background:#e4efdd; border-color: var(--olive); color: var(--olive-dark); font-weight:700; }
+  .opt.incorrect{ background:#f7e3e1; border-color: #b4453d; color:#7a2a24; font-weight:700; }
+  .opt.dim{ opacity:0.55; }
+  .opt.locked{ cursor:default; }
+
+  .feedback{
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-size: 14.5px;
+    line-height:1.6;
+    display:none;
+  }
+  .feedback.show{ display:block; }
+  .feedback.good{ background:#e4efdd; color: var(--olive-dark); }
+  .feedback.bad{ background:#f7e3e1; color:#7a2a24; }
+
+  .next-row{ margin-top:20px; text-align:left; display:none; }
+  .next-row.show{ display:block; }
+
+  /* RESULT SCREEN */
+  .result-card{
+    background: var(--parchment);
+    border: 1px solid #ddcda0;
+    border-radius: 18px;
+    padding: 32px 26px;
+    text-align:center;
+    box-shadow: var(--card-shadow);
+  }
+  .result-card .score-big{
+    font-family:'Frank Ruhl Libre', serif;
+    font-size: 52px;
+    font-weight:900;
+    color: var(--pomegranate-dark);
+    margin: 10px 0 4px;
+  }
+  .result-card .score-sub{ font-size:14px; color:#5c5346; margin-bottom: 18px; }
+  .result-card .verdict{ font-size:17px; font-weight:700; margin-bottom: 22px; line-height:1.5; }
+  .result-actions{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+
+  @media (max-width:420px){
+    .top h1{ font-size:27px; }
+    .q-text{ font-size:18px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="kicker">כיתה ה׳ • חודש תשרי</div>
+    <h1>משחק חגי תשרי</h1>
+    <p>ראש השנה • יום כיפור • סוכות • שמחת תורה</p>
+  </div>
+
+  <div class="seeds" id="seeds"></div>
+
+  <!-- INTRO -->
+  <div class="screen active" id="screen-intro">
+    <div class="intro-card">
+      <h2 style="font-size:22px;">שלום לכיתה ה׳! בואו לצאת למסע בין חגי תשרי</h2>
+      <p style="margin-top:10px; color:#5c5346; font-size:15px; line-height:1.6;">
+        14 שאלות, ארבע תחנות כיפיות. בכל תחנה חג אחר של חודש תשרי - נתחיל בתקיעת שופר ונסיים בריקוד עם ספר תורה.
+      </p>
+      <div class="holidays-row">
+        <div class="holiday-chip"><span class="num">א'</span>ראש השנה</div>
+        <div class="holiday-chip"><span class="num">ב'</span>יום כיפור</div>
+        <div class="holiday-chip"><span class="num">ג'</span>סוכות</div>
+        <div class="holiday-chip"><span class="num">ד'</span>שמחת תורה</div>
+      </div>
+      <button class="primary-btn" onclick="startGame()">בואו נתחיל</button>
+    </div>
+  </div>
+
+  <!-- QUIZ -->
+  <div class="screen" id="screen-quiz">
+    <div class="round-banner" id="round-banner">
+      <div class="icon" id="round-icon"></div>
+      <div>
+        <div class="label" id="round-label"></div>
+        <div class="title" id="round-title"></div>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-count" id="q-count"></div>
+      <div class="q-text" id="q-text"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback"></div>
+      <div class="next-row" id="next-row">
+        <button class="primary-btn" id="next-btn" onclick="nextQuestion()">השאלה הבאה</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="screen" id="screen-result">
+    <div class="result-card">
+      <div style="font-size:15px; color:#5c5346; font-weight:500;">סיימתם את המסע!</div>
+      <div class="score-big" id="score-big"></div>
+      <div class="score-sub" id="score-sub"></div>
+      <div class="verdict" id="verdict"></div>
+      <div class="result-actions">
+        <button class="primary-btn" onclick="restartGame()">שחקו שוב</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const rounds = [
+  {
+    key: 'rh', label: 'תחנה א׳', title: 'ראש השנה', icon: '🐏', theme: 'theme-rh',
+    questions: [
+      {
+        q: 'באיזה חודש עברי חוגגים את ראש השנה?',
+        opts: ['אלול', 'תשרי', 'ניסן', 'כסלו'],
+        correct: 1,
+        exp: 'נכון! ראש השנה הוא היום הראשון של חודש תשרי, ופותח את השנה העברית החדשה.'
+      },
+      {
+        q: 'באיזה כלי תוקעים בבית הכנסת בראש השנה?',
+        opts: ['פעמון', 'שופר', 'חצוצרה', 'תוף'],
+        correct: 1,
+        exp: 'השופר עשוי מקרן של איל, ותוקעים בו כדי "להעיר" אותנו לקראת השנה החדשה.'
+      },
+      {
+        q: 'איזה פרי טובלים בדבש בליל ראש השנה?',
+        opts: ['רימון', 'תפוח', 'תמר', 'ענב'],
+        correct: 1,
+        exp: 'טובלים פרוסת תפוח בדבש ומאחלים "שתהא עלינו שנה מתוקה".'
+      },
+      {
+        q: 'איך מאחלים אחד לשני בראש השנה?',
+        opts: ['חג שמח', 'שנה טובה', 'מועדים לשמחה', 'צום קל'],
+        correct: 1,
+        exp: '"שנה טובה" היא הברכה הכי נפוצה בחג הזה.'
+      }
+    ]
+  },
+  {
+    key: 'yk', label: 'תחנה ב׳', title: 'יום כיפור', icon: '📖', theme: 'theme-yk',
+    questions: [
+      {
+        q: 'כמה ימים יש בין ראש השנה ליום כיפור?',
+        opts: ['שלושה ימים', 'תשעה ימים', 'שבועיים', 'חודש שלם'],
+        correct: 1,
+        exp: 'תשעה ימים. הימים האלה נקראים "עשרת ימי תשובה" (כולל שני החגים עצמם).'
+      },
+      {
+        q: 'מה אנשים לא עושים ביום כיפור?',
+        opts: ['לא אוכלים ולא שותים', 'לא מדברים בכלל', 'לא הולכים ברגל', 'לא ישנים'],
+        correct: 0,
+        exp: 'ביום כיפור צמים - לא אוכלים ולא שותים למשך כל היממה.'
+      },
+      {
+        q: 'איך נקראת התפילה שפותחת את יום כיפור בערב?',
+        opts: ['קבלת שבת', 'כל נדרי', 'הלל', 'סליחות'],
+        correct: 1,
+        exp: 'תפילת "כל נדרי" נאמרת ברגע שהחג נכנס, ורבים באים לבית הכנסת במיוחד בשבילה.'
+      },
+      {
+        q: 'מה קורה בסוף יום כיפור, עם שקיעת השמש?',
+        opts: ['תוקעים תקיעה גדולה בשופר', 'שרים שיר לכת', 'מדליקים נרות חנוכה', 'קוראים במגילת אסתר'],
+        correct: 0,
+        exp: 'בתפילת "נעילה", שמסיימת את היום, תוקעים תקיעה גדולה אחת בשופר - וכולם יודעים שהצום נגמר.'
+      }
+    ]
+  },
+  {
+    key: 'suk', label: 'תחנה ג׳', title: 'סוכות', icon: '🌿', theme: 'theme-suk',
+    questions: [
+      {
+        q: 'כמה ימים חוגגים את חג הסוכות?',
+        opts: ['שלושה ימים', 'שבעה ימים', 'עשרה ימים', 'ארבעה עשר יום'],
+        correct: 1,
+        exp: 'שבעה ימים שלמים - ואחריהם מגיע עוד חג, שמיני עצרת.'
+      },
+      {
+        q: 'איך נקראים ארבעת הצמחים שלוקחים בחג הסוכות?',
+        opts: ['לולב, אתרוג, הדס וערבה', 'תמר, זית, גפן ותאנה', 'חיטה, שעורה, שיבולת שועל ודוחן', 'רימון, תפוח, אגס וענב'],
+        correct: 0,
+        exp: 'לולב, אתרוג, הדס וערבה - ארבעת המינים שמברכים עליהם ומנענעים בכל בוקר של החג.'
+      },
+      {
+        q: 'למה יושבים בסוכה בחג הזה?',
+        opts: ['כדי להתחמם מהקור', 'כדי לזכור איך גרו בני ישראל במדבר', 'כדי לחסוך מקום בבית', 'סתם בשביל הכיף'],
+        correct: 1,
+        exp: 'הסוכה מזכירה לנו איך בני ישראל גרו בסוכות (או בענני הגנה) כשהלכו במדבר, אחרי היציאה ממצרים.'
+      },
+      {
+        q: 'איך עוד קוראים לחג הסוכות?',
+        opts: ['זמן חירותנו', 'זמן מתן תורתנו', 'זמן שמחתנו', 'זמן תשובתנו'],
+        correct: 2,
+        exp: '"זמן שמחתנו" - כי זה חג שמח במיוחד, של אסיף היבול בסוף הקיץ.'
+      }
+    ]
+  },
+  {
+    key: 'st', label: 'תחנה ד׳', title: 'שמחת תורה', icon: '📜', theme: 'theme-st',
+    questions: [
+      {
+        q: 'מה חוגגים בשמחת תורה?',
+        opts: ['את תחילת השנה החדשה', 'שסיימו לקרוא את כל התורה ומתחילים שוב מההתחלה', 'שקיבלו את התורה בהר סיני', 'שנגמר הקיץ'],
+        correct: 1,
+        exp: 'קוראים את הפרק האחרון בתורה, ומיד פותחים שוב ב"בראשית" - וזה נשמע כל כך שמח שעושים לזה חג!'
+      },
+      {
+        q: 'מה עושים עם ספרי התורה בחג שמחת תורה?',
+        opts: ['שמים אותם בארון ולא נוגעים בהם', 'רוקדים איתם ומקיפים את הבימה', 'קוראים בהם בשקט בבית', 'מעבירים אותם לבית כנסת אחר'],
+        correct: 1,
+        exp: 'עושים "הקפות" - רוקדים ושרים עם ספרי התורה סביב הבימה, כי כולם שמחים כל כך על התורה.'
+      }
+    ]
+  }
+];
+
+let currentRound = 0, currentQ = 0, score = 0, answered = false;
+let totalQuestions = rounds.reduce((s,r)=>s+r.questions.length,0);
+let seedResults = [];
+
+function buildSeeds(){
+  const seedsEl = document.getElementById('seeds');
+  seedsEl.innerHTML = '';
+  for(let i=0;i<totalQuestions;i++){
+    const s = document.createElement('div');
+    s.className = 'seed';
+    s.id = 'seed-'+i;
+    seedsEl.appendChild(s);
+  }
+}
+buildSeeds();
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function startGame(){
+  currentRound = 0; currentQ = 0; score = 0; seedResults = [];
+  showScreen('screen-quiz');
+  renderQuestion();
+}
+
+function globalIndex(){
+  let idx = 0;
+  for(let r=0;r<currentRound;r++) idx += rounds[r].questions.length;
+  return idx + currentQ;
+}
+
+function renderQuestion(){
+  answered = false;
+  const round = rounds[currentRound];
+  const q = round.questions[currentQ];
+
+  const banner = document.getElementById('round-banner');
+  banner.className = 'round-banner ' + round.theme;
+  document.getElementById('round-icon').textContent = round.icon;
+  document.getElementById('round-label').textContent = round.label;
+  document.getElementById('round-title').textContent = round.title;
+
+  document.getElementById('q-count').textContent = 'שאלה ' + (globalIndex()+1) + ' מתוך ' + totalQuestions;
+  document.getElementById('q-text').textContent = q.q;
+
+  const optsEl = document.getElementById('options');
+  optsEl.innerHTML = '';
+  q.opts.forEach((opt, i) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.textContent = opt;
+    b.onclick = () => selectAnswer(i);
+    optsEl.appendChild(b);
+  });
+
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback';
+  fb.textContent = '';
+  document.getElementById('next-row').classList.remove('show');
+}
+
+function selectAnswer(i){
+  if(answered) return;
+  answered = true;
+  const round = rounds[currentRound];
+  const q = round.questions[currentQ];
+  const optEls = document.querySelectorAll('.opt');
+  const idx = globalIndex();
+  const seedEl = document.getElementById('seed-'+idx);
+
+  optEls.forEach((el, j) => {
+    el.classList.add('locked');
+    if(j === q.correct) el.classList.add('correct');
+    else if(j === i) el.classList.add('incorrect');
+    else el.classList.add('dim');
+  });
+
+  const fb = document.getElementById('feedback');
+  fb.classList.add('show');
+  if(i === q.correct){
+    score++;
+    fb.classList.add('good');
+    fb.textContent = 'כל הכבוד, נכון! ' + q.exp;
+    seedEl.classList.add('filled');
+  } else {
+    fb.classList.add('bad');
+    fb.textContent = 'כמעט - זו לא התשובה. ' + q.exp;
+    seedEl.classList.add('filled','wrong');
+  }
+
+  document.getElementById('next-row').classList.add('show');
+  document.getElementById('next-btn').textContent =
+    (currentQ === round.questions.length - 1 && currentRound === rounds.length - 1)
+      ? 'לתוצאה הסופית' : 'השאלה הבאה';
+}
+
+function nextQuestion(){
+  const round = rounds[currentRound];
+  if(currentQ < round.questions.length - 1){
+    currentQ++;
+  } else if(currentRound < rounds.length - 1){
+    currentRound++;
+    currentQ = 0;
+  } else {
+    showResult();
+    return;
+  }
+  renderQuestion();
+}
+
+function showResult(){
+  showScreen('screen-result');
+  document.getElementById('score-big').textContent = score + ' / ' + totalQuestions;
+  document.getElementById('score-sub').textContent = 'תשובות נכונות מתוך ' + totalQuestions + ' שאלות על חגי תשרי';
+
+  let verdict = '';
+  const pct = score / totalQuestions;
+  if(pct === 1) verdict = 'מדהים! ענית נכון על הכל - אלוף חגי תשרי של הכיתה!';
+  else if(pct >= 0.75) verdict = 'כל הכבוד! אתם ממש מכירים את חגי תשרי.';
+  else if(pct >= 0.5) verdict = 'יופי של התחלה! עוד קצת ותהיו מומחים לחגי תשרי.';
+  else verdict = 'שווה לחזור על החגים עם המורה ולנסות שוב - תצליחו!';
+  document.getElementById('verdict').textContent = verdict;
+}
+
+function restartGame(){
+  document.querySelectorAll('.seed').forEach(s=>{ s.classList.remove('filled','wrong'); });
+  showScreen('screen-intro');
+}
+</script>
+</body>
+</html>
