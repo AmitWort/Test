@@ -1,0 +1,362 @@
+==================== package.json ====================
+
+{"name":"waygo-israel","private":true,"version":"0.1.0","type":"module",
+"scripts":{"dev":"vite","build":"tsc -b && vite build","preview":"vite preview"},
+"dependencies":{"@supabase/supabase-js":"^2.45.0","leaflet":"^1.9.4","react":"^18.3.1","react-dom":"^18.3.1"},
+"devDependencies":{"@tailwindcss/vite":"^4.0.0","@types/leaflet":"^1.9.12","@types/react":"^18.3.3","@types/react-dom":"^18.3.0","@vitejs/plugin-react":"^4.3.1","tailwindcss":"^4.0.0","typescript":"^5.5.0","vite":"^5.4.0"}}
+
+
+==================== vite.config.ts ====================
+
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+export default defineConfig({ plugins: [react(), tailwindcss()] })
+
+
+==================== tsconfig.json ====================
+
+{"compilerOptions":{"target":"ES2020","lib":["ES2020","DOM"],"module":"ESNext","moduleResolution":"bundler","jsx":"react-jsx","strict":true,"skipLibCheck":true,"noEmit":true,"types":["vite/client"]},"include":["src"]}
+
+
+==================== index.html ====================
+
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>WAYGO ISRAEL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800&display=swap" rel="stylesheet"/>
+</head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>
+
+
+==================== .env.example ====================
+
+# Client-safe values only. NO routing keys here.
+VITE_PROXY_URL=https://<project>.supabase.co/functions/v1/proxy
+VITE_SUPABASE_URL=https://<project>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon key>
+
+
+==================== supabase/functions/proxy/index.ts ====================
+
+// supabase functions deploy proxy ; supabase secrets set ORS_API_KEY=xxxx
+const KEY = Deno.env.get('ORS_API_KEY')
+const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type, apikey' }
+const PROFILES = ['driving-car','cycling-regular','foot-walking','cycling-mountain','foot-hiking']
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
+  if (!KEY) return Response.json({ error: 'NO_API_KEY' }, { status: 503, headers: cors })
+  const b = await req.json()
+  let url = '', init: RequestInit = {}
+  if (b.op === 'route') {
+    if (!PROFILES.includes(b.profile)) return Response.json({ error: 'BAD_PROFILE' }, { status: 400, headers: cors })
+    url = `https://api.openrouteservice.org/v2/directions/${b.profile}/geojson`
+    init = { method: 'POST', headers: { Authorization: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(b.body) }
+  } else if (b.op === 'geocode') {
+    const q = new URLSearchParams({ api_key: KEY, text: String(b.text).slice(0, 200), 'boundary.country': 'ISR', lang: 'he', size: '6' })
+    url = `https://api.openrouteservice.org/geocode/autocomplete?${q}`
+  } else return Response.json({ error: 'BAD_OP' }, { status: 400, headers: cors })
+  const r = await fetch(url, init)
+  return new Response(await r.text(), { status: r.status, headers: { ...cors, 'Content-Type': 'application/json' } })
+})
+
+
+==================== src/routing/types.ts ====================
+
+export type Mode = 'car' | 'bike' | 'walk' | 'mtb' | 'run'
+export type LL = [number, number]
+export interface Step { text: string; distance: number; duration: number; at: number }
+export interface Route {
+  id: string; label: string; coords: LL[]; distance: number; duration: number
+  ascent?: number; descent?: number; waytypes: string[]; steps: Step[]; pros: string[]; cons: string[]
+}
+export interface Place { label: string; pos: LL }
+export interface RoutingProvider {
+  supports(mode: Mode): boolean
+  route(mode: Mode, points: LL[]): Promise<Route[]>
+  geocode(text: string): Promise<Place[]>
+}
+export class ConfigError extends Error {}
+
+
+==================== src/routing/ors.ts ====================
+
+import { ConfigError, LL, Mode, Place, Route, RoutingProvider } from './types'
+const URL_ = import.meta.env.VITE_PROXY_URL as string | undefined
+const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+// Every mode maps to a different ORS profile, so routes differ per mode.
+const PROFILE: Record<Mode, string> = { car: 'driving-car', bike: 'cycling-regular', walk: 'foot-walking', mtb: 'cycling-mountain', run: 'foot-hiking' }
+const WAYTYPE = ['לא ידוע','כביש מהיר','דרך ראשית','דרך משנית','דרך מקומית','רחוב','שביל','דרך עפר','שביל אופניים','מדרכה','שביל הליכה','מעבר','מדרגות','מעבר חצייה','מעבר רגלי']
+async function call(body: unknown) {
+  if (!URL_) throw new ConfigError('חסרה כתובת ה-Proxy (VITE_PROXY_URL). ראה README.')
+  const r = await fetch(URL_, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(ANON ? { Authorization: `Bearer ${ANON}`, apikey: ANON } : {}) }, body: JSON.stringify(body) })
+  const j = await r.json().catch(() => ({}))
+  if (j.error === 'NO_API_KEY') throw new ConfigError('חסר מפתח OpenRouteService בשרת. הרץ: supabase secrets set ORS_API_KEY=...')
+  if (!r.ok) throw new Error(j?.error?.message ?? 'שגיאת ניתוב')
+  return j
+}
+function parse(f: any, id: string, label: string, pros: string[], cons: string[]): Route {
+  const p = f.properties, c: LL[] = f.geometry.coordinates.map((x: number[]) => [x[1], x[0]])
+  const steps = (p.segments ?? []).flatMap((s: any) => s.steps.map((t: any) => ({ text: t.instruction, distance: t.distance, duration: t.duration, at: t.way_points[0] })))
+  const wt = p.extras?.waytypes?.summary?.map((s: any) => WAYTYPE[s.value] ?? '') ?? []
+  return { id, label, coords: c, distance: p.summary.distance, duration: p.summary.duration, ascent: p.ascent, descent: p.descent, waytypes: [...new Set<string>(wt.filter(Boolean))], steps, pros, cons }
+}
+export const ors: RoutingProvider = {
+  supports: () => true,
+  async route(mode: Mode, pts: LL[]) {
+    const profile = PROFILE[mode]
+    const base = { coordinates: pts.map(([a, b]) => [b, a]), language: 'he', instructions: true, elevation: true, extra_info: ['waytype'] }
+    const run = (extra: object) => call({ op: 'route', profile, body: { ...base, ...extra } }).then(j => j.features as any[])
+    const [fast, short, alt] = await Promise.allSettled([
+      run({ preference: 'fastest' }),
+      run({ preference: 'shortest' }),
+      pts.length === 2 ? run({ preference: 'recommended', alternative_routes: { target_count: 2, share_factor: 0.6, weight_factor: 1.6 } }) : Promise.reject(),
+    ])
+    const out: Route[] = []
+    for (const x of [fast, short]) if (x.status === 'rejected' && x.reason instanceof ConfigError) throw x.reason
+    if (fast.status === 'fulfilled') out.push(parse(fast.value[0], 'fast', 'המהיר ביותר', ['זמן הגעה קצר'], ['ייתכן מרחק ארוך יותר']))
+    if (short.status === 'fulfilled') out.push(parse(short.value[0], 'short', 'הקצר ביותר', ['מרחק קצר'], ['ייתכן שייקח יותר זמן']))
+    if (alt.status === 'fulfilled' && alt.value.length > 1) out.push(parse(alt.value[1], 'alt', 'מסלול חלופי', ['מסלול שונה מהאחרים'], ['לרוב ארוך או איטי יותר']))
+    if (!out.length) throw new Error('לא נמצא מסלול מתאים לאמצעי התחבורה שנבחר.')
+    return out
+  },
+  async geocode(text: string): Promise<Place[]> {
+    const j = await call({ op: 'geocode', text })
+    return (j.features ?? []).map((f: any) => ({ label: f.properties.label, pos: [f.geometry.coordinates[1], f.geometry.coordinates[0]] as LL }))
+  },
+}
+// To swap provider (GraphHopper/OSRM): implement RoutingProvider and change this export.
+export const provider: RoutingProvider = ors
+
+
+==================== src/lib/store.ts ====================
+
+import { createClient } from '@supabase/supabase-js'
+import { LL, Mode } from '../routing/types'
+export interface Saved { id: string; name: string; description: string; mode: Mode; points: LL[]; distance: number; is_public: boolean; difficulty: 'קל' | 'בינוני' | 'קשה' }
+const sb = import.meta.env.VITE_SUPABASE_URL ? createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY) : null
+const K = 'waygo.routes', F = 'waygo.favs'
+const rd = <T,>(k: string, d: T): T => { try { return JSON.parse(localStorage.getItem(k) ?? '') } catch { return d } }
+export const store = {
+  online: !!sb,
+  mine: (): Saved[] => rd(K, []),
+  save(r: Saved) {
+    localStorage.setItem(K, JSON.stringify([r, ...rd<Saved[]>(K, []).filter(x => x.id !== r.id)]))
+    if (sb && r.is_public) sb.from('routes').upsert(r).then(() => {})
+  },
+  remove(id: string) { localStorage.setItem(K, JSON.stringify(rd<Saved[]>(K, []).filter(x => x.id !== id))) },
+  async publicRoutes(): Promise<Saved[]> { if (!sb) return []; const { data } = await sb.from('routes').select('*').eq('is_public', true).limit(100); return (data as Saved[]) ?? [] },
+  favs: (): string[] => rd(F, []),
+  toggleFav(id: string) { const f = rd<string[]>(F, []); localStorage.setItem(F, JSON.stringify(f.includes(id) ? f.filter(x => x !== id) : [...f, id])) },
+}
+
+
+==================== src/lib/geo.ts ====================
+
+import { LL } from '../routing/types'
+export const dist = (a: LL, b: LL) => { const R = 6371000, r = Math.PI / 180, dLat = (b[0]-a[0])*r, dLng = (b[1]-a[1])*r
+  const h = Math.sin(dLat/2)**2 + Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dLng/2)**2; return 2*R*Math.asin(Math.sqrt(h)) }
+export const nearest = (c: LL[], p: LL) => { let bi = 0, bd = Infinity; c.forEach((x, i) => { const d = dist(x, p); if (d < bd) { bd = d; bi = i } }); return { index: bi, off: bd } }
+export const remaining = (c: LL[], from: number) => { let s = 0; for (let i = from; i < c.length - 1; i++) s += dist(c[i], c[i+1]); return s }
+export const km = (m: number) => (m/1000).toFixed(m < 10000 ? 1 : 0) + ' ק״מ'
+export const mins = (s: number) => s >= 3600 ? `${Math.floor(s/3600)} ש׳ ${Math.round(s%3600/60)} ד׳` : `${Math.max(1, Math.round(s/60))} ד׳`
+
+
+==================== src/main.tsx ====================
+
+import { createRoot } from 'react-dom/client'
+import 'leaflet/dist/leaflet.css'
+import './index.css'
+import App from './App'
+createRoot(document.getElementById('root')!).render(<App />)
+
+
+==================== src/index.css ====================
+
+@import "tailwindcss";
+:root{--bg:#f3f6f8;--panel:#fffffff0;--ink:#0d2a3a;--sub:#5b7283;--accent:#0a7ea4;--hot:#f2a312}
+.dark{--bg:#0b1820;--panel:#12252ff0;--ink:#e6f1f6;--sub:#8fa8b6;--accent:#37b6dd;--hot:#f7b84a}
+html,body,#root{height:100%;margin:0;font-family:Heebo,system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+.panel{background:var(--panel);backdrop-filter:blur(10px);border-radius:18px;box-shadow:0 6px 28px #0003}
+.btn{background:var(--accent);color:#fff;border-radius:12px;padding:.6rem 1rem;font-weight:600;transition:transform .15s}
+.btn:active{transform:scale(.97)}.btn2{border:1px solid var(--sub);border-radius:12px;padding:.5rem .8rem}
+.inp{width:100%;background:transparent;border:1px solid var(--sub);border-radius:12px;padding:.6rem .8rem;color:var(--ink)}
+.dark .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9)}
+
+
+==================== src/App.tsx ====================
+
+import { useEffect, useRef, useState } from 'react'
+import L from 'leaflet'
+import { provider } from './routing/ors'
+import { ConfigError, LL, Mode, Place, Route } from './routing/types'
+import { store, Saved } from './lib/store'
+import { km, mins, nearest, remaining } from './lib/geo'
+
+const MODES: { id: Mode; icon: string; name: string }[] = [
+  { id: 'car', icon: '🚗', name: 'רכב' }, { id: 'bike', icon: '🚴', name: 'אופניים' }, { id: 'walk', icon: '🚶', name: 'הליכה' },
+  { id: 'mtb', icon: '🚵', name: 'אופני שטח' }, { id: 'run', icon: '🏃', name: 'ריצה' }]
+const TABS = ['מפה', 'חיפוש מסלול', 'המסלולים שלי', 'מסלולים ציבוריים', 'מועדפים', 'הגדרות'] as const
+type Tab = typeof TABS[number]
+const COLORS = ['#0a7ea4', '#f2a312', '#7a5af8']
+const ISRAEL: LL = [31.5, 34.9]
+
+function PlaceInput({ label, value, onPick }: { label: string; value: string; onPick: (p: Place) => void }) {
+  const [q, setQ] = useState(value), [opts, setOpts] = useState<Place[]>([]), t = useRef<number>()
+  useEffect(() => setQ(value), [value])
+  const change = (v: string) => { setQ(v); clearTimeout(t.current)
+    if (v.length < 3) return setOpts([])
+    t.current = window.setTimeout(() => provider.geocode(v).then(setOpts).catch(() => setOpts([])), 300) }
+  return <div className="relative"><input className="inp" placeholder={label} value={q} onChange={e => change(e.target.value)} />
+    {opts.length > 0 && <ul className="panel absolute z-[1200] mt-1 w-full max-h-52 overflow-auto p-1">
+      {opts.map((o, i) => <li key={i}><button className="w-full text-start p-2 rounded hover:bg-black/5" onClick={() => { onPick(o); setQ(o.label); setOpts([]) }}>{o.label}</button></li>)}</ul>}</div>
+}
+
+export default function App() {
+  const [tab, setTab] = useState<Tab>('מפה'), [dark, setDark] = useState(matchMedia('(prefers-color-scheme: dark)').matches)
+  const [mode, setMode] = useState<Mode>('car'), [from, setFrom] = useState<Place | null>(null), [to, setTo] = useState<Place | null>(null)
+  const [routes, setRoutes] = useState<Route[]>([]), [sel, setSel] = useState(0), [busy, setBusy] = useState(false), [err, setErr] = useState('')
+  const [me, setMe] = useState<LL | null>(null), [heading, setHeading] = useState(0)
+  const [nav, setNav] = useState(false), [navIdx, setNavIdx] = useState(0), [off, setOff] = useState(false)
+  const [mine, setMine] = useState(store.mine()), [pub, setPub] = useState<Saved[]>([]), [favs, setFavs] = useState(store.favs())
+  const [flt, setFlt] = useState({ mode: '', diff: '', max: 100 })
+  const [edit, setEdit] = useState(false), [wps, setWps] = useState<LL[]>([])
+  const mapEl = useRef<HTMLDivElement>(null), map = useRef<L.Map>(), lines = useRef<L.LayerGroup>(), meMk = useRef<L.Marker>(), wpLayer = useRef<L.LayerGroup>()
+  const editRef = useRef(edit); editRef.current = edit
+  const route = routes[sel]
+
+  useEffect(() => { document.documentElement.classList.toggle('dark', dark) }, [dark])
+  useEffect(() => { // map init
+    const m = L.map(mapEl.current!, { zoomControl: false }).setView(ISRAEL, 8)
+    const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m)
+    const cyc = L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', { maxZoom: 20, attribution: '© CyclOSM' })
+    const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenTopoMap' })
+    L.control.layers({ 'רגילה': osm, 'אופניים': cyc, 'טופוגרפית': topo }, {}, { position: 'topleft' }).addTo(m)
+    L.control.zoom({ position: 'bottomleft' }).addTo(m)
+    lines.current = L.layerGroup().addTo(m); wpLayer.current = L.layerGroup().addTo(m); map.current = m
+    m.on('click', e => { if (editRef.current) setWps(w => [...w, [e.latlng.lat, e.latlng.lng]]) })
+    return () => { m.remove() }
+  }, [])
+  useEffect(() => { setTimeout(() => map.current?.invalidateSize(), 50) }, [tab, nav])
+  useEffect(() => { // GPS (only after user action)
+    if (!navigator.geolocation || (!nav && !me)) return
+    const id = navigator.geolocation.watchPosition(p => { setMe([p.coords.latitude, p.coords.longitude]); if (p.coords.heading != null && !isNaN(p.coords.heading)) setHeading(p.coords.heading) }, () => setErr('אין גישה למיקום. אשר הרשאת מיקום בדפדפן.'), { enableHighAccuracy: true })
+    return () => navigator.geolocation.clearWatch(id)
+  }, [nav, !!me])
+  useEffect(() => { // user marker with heading
+    if (!me || !map.current) return
+    const icon = L.divIcon({ className: '', iconSize: [28, 28], html: `<div style="transform:rotate(${heading}deg);font-size:24px;line-height:28px;text-align:center">🧭</div>` })
+    if (!meMk.current) meMk.current = L.marker(me, { icon }).addTo(map.current); else { meMk.current.setLatLng(me); meMk.current.setIcon(icon) }
+    if (nav) map.current.setView(me, Math.max(map.current.getZoom(), 16))
+    if (nav && route) { const n = nearest(route.coords, me); setNavIdx(n.index); setOff(n.off > 60) }
+  }, [me, heading])
+  useEffect(() => { // draw routes
+    lines.current?.clearLayers(); if (!routes.length) return
+    routes.forEach((r, i) => { if (nav && i !== sel) return
+      const pl = L.polyline(r.coords, { color: COLORS[i], weight: i === sel ? 7 : 4, opacity: i === sel ? 0.95 : 0.5 }).on('click', () => setSel(i)).addTo(lines.current!)
+      if (i === sel && !nav) map.current?.fitBounds(pl.getBounds(), { padding: [60, 60] }) })
+  }, [routes, sel, nav])
+  useEffect(() => { // waypoint editor markers (draggable)
+    wpLayer.current?.clearLayers()
+    wps.forEach((p, i) => L.marker(p, { draggable: true }).bindTooltip(i === 0 ? 'התחלה' : i === wps.length - 1 ? 'סיום' : `נקודה ${i}`)
+      .on('dragend', e => setWps(w => w.map((x, j) => j === i ? [e.target.getLatLng().lat, e.target.getLatLng().lng] as LL : x)))
+      .on('contextmenu', () => setWps(w => w.filter((_, j) => j !== i))).addTo(wpLayer.current!))
+  }, [wps])
+
+  async function find(points?: LL[]) {
+    const pts = points ?? (from && to ? [from.pos, to.pos] : null)
+    if (!pts || pts.length < 2) return setErr('בחר נקודת התחלה ויעד מתוך ההצעות.')
+    if (!provider.supports(mode)) return setErr('אמצעי התחבורה אינו נתמך אצל ספק הניתוב.')
+    setBusy(true); setErr('')
+    try { const r = await provider.route(mode, pts); setRoutes(r); setSel(0); setTab('חיפוש מסלול') }
+    catch (e) { setRoutes([]); setErr(e instanceof ConfigError ? '⚙️ ' + e.message : (e as Error).message) }
+    setBusy(false)
+  }
+  const save = () => { if (!route) return; const pts = wps.length > 1 ? wps : (from && to ? [from.pos, to.pos] : []); if (pts.length < 2) return
+    const name = prompt('שם המסלול?', `${from?.label ?? 'מסלול'} → ${to?.label ?? ''}`); if (!name) return
+    const description = prompt('תיאור (לא חובה)') ?? ''; const is_public = store.online && confirm('לפרסם את המסלול לציבור?')
+    const diff: Saved['difficulty'] = (route.ascent ?? 0) > 600 ? 'קשה' : (route.ascent ?? 0) > 200 ? 'בינוני' : 'קל'
+    store.save({ id: crypto.randomUUID(), name, description, mode, points: pts, distance: route.distance, is_public, difficulty: diff }); setMine(store.mine()) }
+  const open = (s: Saved) => { setMode(s.mode); setWps(s.points); setFrom(null); setTo(null); find(s.points) }
+  const fav = (id: string) => { store.toggleFav(id); setFavs(store.favs()) }
+  const startPicker = () => { setEdit(true); setWps([]); setTab('מפה') }
+
+  const step = route?.steps.filter(s => s.at >= navIdx)[0]
+  const left = route ? remaining(route.coords, navIdx) : 0
+  const eta = route ? new Date(Date.now() + route.duration * (left / Math.max(route.distance, 1)) * 1000).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : ''
+  const card = (s: Saved) => <div key={s.id} className="p-3 border-b border-black/10 flex gap-2 items-center">
+    <button className="flex-1 text-start" onClick={() => open(s)}><b>{s.name}</b><div className="text-sm" style={{ color: 'var(--sub)' }}>{MODES.find(m => m.id === s.mode)?.icon} {km(s.distance)} · {s.difficulty}</div></button>
+    <button onClick={() => fav(s.id)} aria-label="מועדף">{favs.includes(s.id) ? '⭐' : '☆'}</button>
+    {mine.some(x => x.id === s.id) && <button onClick={() => { store.remove(s.id); setMine(store.mine()) }} aria-label="מחק">🗑️</button>}</div>
+
+  return <div className="h-full w-full relative overflow-hidden">
+    <div ref={mapEl} className="absolute inset-0" />
+    {nav && route ? <>
+      <div className="panel absolute top-3 inset-x-3 z-[1000] p-4 md:max-w-md md:mx-auto">
+        <div className="text-2xl font-extrabold">{step?.text ?? 'הגעת ליעד'}</div>
+        <div style={{ color: 'var(--sub)' }}>בעוד {km(step ? Math.max(step.distance, 0) : 0)} · נשארו {km(left)} · הגעה {eta}</div>
+        <div className="h-2 rounded bg-black/10 mt-2"><div className="h-2 rounded" style={{ background: 'var(--hot)', width: `${100 - left / route.distance * 100}%` }} /></div>
+        {off && <div className="mt-2 flex gap-2 items-center">סטית מהמסלול <button className="btn" onClick={() => me && find([me, ...(wps.length ? wps.slice(1) : to ? [to.pos] : [])])}>חשב מחדש</button></div>}</div>
+      <div className="absolute bottom-6 inset-x-3 z-[1000] flex gap-2 justify-center">
+        <button className="btn" style={{ background: '#d92d20' }} onClick={() => setNav(false)}>עצור ניווט</button>
+        <button className="btn2 panel" onClick={() => me && map.current?.setView(me, 17)}>חזור למסלול</button></div>
+    </> : <>
+      <nav className="panel absolute top-3 inset-x-3 z-[1000] p-1 flex gap-1 overflow-x-auto md:max-w-3xl md:mx-auto">
+        <b className="px-3 self-center whitespace-nowrap" style={{ color: 'var(--accent)' }}>WAYGO ISRAEL</b>
+        {TABS.map(t => <button key={t} onClick={() => { setTab(t); if (t === 'מסלולים ציבוריים') store.publicRoutes().then(setPub) }}
+          className="px-3 py-2 rounded-xl whitespace-nowrap" style={tab === t ? { background: 'var(--accent)', color: '#fff' } : {}}>{t}</button>)}</nav>
+      {tab === 'מפה' && <div className="absolute bottom-6 inset-x-3 z-[1000] flex gap-2 justify-center">
+        <button className="btn" onClick={() => { setMe(me ?? ISRAEL); navigator.geolocation?.getCurrentPosition(p => { const c: LL = [p.coords.latitude, p.coords.longitude]; setMe(c); map.current?.setView(c, 15) }, () => setErr('אין גישה למיקום')) }}>📍 המיקום שלי</button>
+        {!edit ? <button className="btn2 panel" onClick={startPicker}>✏️ צור מסלול על המפה</button>
+          : <><button className="btn" onClick={() => { setEdit(false); find(wps) }}>חשב מסלול ({wps.length} נק׳)</button><button className="btn2 panel" onClick={() => { setEdit(false); setWps([]) }}>בטל</button></>}</div>}
+      {edit && <div className="panel absolute top-20 inset-x-3 z-[1000] p-2 text-center md:max-w-md md:mx-auto">לחץ על המפה להוספת נקודות · גרור להזזה · לחיצה ימנית למחיקה</div>}
+      {tab !== 'מפה' && <aside className="panel absolute z-[1000] top-20 bottom-3 inset-x-3 md:inset-x-auto md:right-3 md:w-[400px] overflow-auto p-4">
+        {tab === 'חיפוש מסלול' && <div className="space-y-3">
+          <div className="grid grid-cols-5 gap-1">{MODES.map(m => <button key={m.id} onClick={() => setMode(m.id)} className="rounded-xl p-2 text-sm" style={mode === m.id ? { background: 'var(--accent)', color: '#fff' } : { border: '1px solid var(--sub)' }}><div className="text-xl">{m.icon}</div>{m.name}</button>)}</div>
+          <PlaceInput label="מאיפה יוצאים?" value={from?.label ?? ''} onPick={setFrom} />
+          <PlaceInput label="לאן רוצים להגיע?" value={to?.label ?? ''} onPick={setTo} />
+          <button className="btn w-full" disabled={busy} onClick={() => find()}>{busy ? 'מחשב…' : 'מצא מסלול'}</button>
+          {err && <div className="p-3 rounded-xl bg-red-500/15" role="alert">{err}</div>}
+          {routes.map((r, i) => <div key={r.id} onClick={() => setSel(i)} className="p-3 rounded-xl cursor-pointer" style={{ border: `2px solid ${i === sel ? COLORS[i] : 'transparent'}`, background: 'color-mix(in srgb,var(--sub) 10%,transparent)' }}>
+            <div className="flex justify-between"><b style={{ color: COLORS[i] }}>מסלול {i + 1} – {r.label}</b><span>{mins(r.duration)} · {km(r.distance)}</span></div>
+            <div className="text-sm" style={{ color: 'var(--sub)' }}>{r.waytypes.join(', ')}{r.ascent != null && ` · עלייה ${Math.round(r.ascent)} מ׳ / ירידה ${Math.round(r.descent ?? 0)} מ׳`}</div>
+            <div className="text-sm">👍 {r.pros.join(', ')} · 👎 {r.cons.join(', ')}</div>
+            {i === sel && <><ol className="list-decimal ps-5 mt-2 text-sm max-h-40 overflow-auto">{r.steps.map((s, j) => <li key={j}>{s.text} ({km(s.distance)})</li>)}</ol>
+              <div className="flex gap-2 mt-2"><button className="btn flex-1" onClick={() => { setNav(true) }}>התחל ניווט</button><button className="btn2" onClick={save}>שמור</button></div></>}</div>)}</div>}
+        {tab === 'המסלולים שלי' && <div>{mine.length ? mine.map(card) : <p>עדיין אין מסלולים שמורים. חשב מסלול ולחץ ״שמור״, או צור מסלול על המפה.</p>}</div>}
+        {tab === 'מסלולים ציבוריים' && <div className="space-y-2">
+          <div className="flex gap-2"><select className="inp" onChange={e => setFlt({ ...flt, mode: e.target.value })}><option value="">כל התחבורה</option>{MODES.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
+            <select className="inp" onChange={e => setFlt({ ...flt, diff: e.target.value })}><option value="">כל הרמות</option><option>קל</option><option>בינוני</option><option>קשה</option></select></div>
+          <label className="block text-sm">עד {flt.max} ק״מ<input type="range" min={1} max={200} value={flt.max} className="w-full" onChange={e => setFlt({ ...flt, max: +e.target.value })} /></label>
+          {!store.online ? <p>מסלולים ציבוריים דורשים חיבור ל-Supabase (ראה README).</p> :
+            pub.filter(r => (!flt.mode || r.mode === flt.mode) && (!flt.diff || r.difficulty === flt.diff) && r.distance / 1000 <= flt.max).map(card)}</div>}
+        {tab === 'מועדפים' && <div>{[...mine, ...pub].filter(r => favs.includes(r.id)).map(card)}{!favs.length && <p>סמן ⭐ ליד מסלול כדי לשמור אותו כאן.</p>}</div>}
+        {tab === 'הגדרות' && <div className="space-y-3"><label className="flex justify-between">מצב לילה<input type="checkbox" checked={dark} onChange={e => setDark(e.target.checked)} /></label>
+          <p style={{ color: 'var(--sub)' }}>מצב אורח: המסלולים נשמרים במכשיר. {store.online ? 'Supabase מחובר.' : 'Supabase לא מוגדר.'}</p></div>}
+      </aside>}
+    </>}
+  </div>
+}
+
+
+==================== README.md ====================
+
+# WAYGO ISRAEL
+React + TS + Vite + Tailwind 4 + Leaflet/OSM. Routing via OpenRouteService behind a Supabase Edge Function (no keys in the client).
+
+## Run
+1. `npm i`
+2. Get a free key at openrouteservice.org. `supabase functions deploy proxy --no-verify-jwt` then `supabase secrets set ORS_API_KEY=...`
+3. `cp .env.example .env` and fill in values, then `npm run dev`
+
+## Supabase table
+```sql
+create table routes(id uuid primary key, name text, description text, mode text, points jsonb, distance real,
+  is_public boolean default false, difficulty text, user_id uuid default auth.uid(), created_at timestamptz default now());
+alter table routes enable row level security;
+create policy "read public" on routes for select using (is_public);
+create policy "write own" on routes for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+```
+## Not built yet
+Supabase login (guest mode works), hazard reports + verification, POI/water-source overlays, Hebrew-labelled tiles.
+Swap routing provider: implement `RoutingProvider` in `src/routing/` (GraphHopper/OSRM).
