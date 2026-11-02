@@ -380,7 +380,7 @@ function openAdmin(){$("admcode").value="";$("admerr").textContent="";$("admcode
 function closeAdmin(){$("adm").classList.remove("open")}
 $("ttl").onclick=openAdmin;
 function arm(b,txt,fn){if(b.getAttribute("data-arm")){clearTimeout(+b.getAttribute("data-arm"));b.removeAttribute("data-arm");b.innerHTML=b.getAttribute("data-orig");fn();return}b.setAttribute("data-orig",b.innerHTML);b.innerHTML=txt;b.setAttribute("data-arm",setTimeout(function(){b.removeAttribute("data-arm");b.innerHTML=b.getAttribute("data-orig")},3000))}
-var HASH="24200079dcdbfd8415ca7a5cfc46cc3acb52b9cb742202ec36a87f352ed23fb6",HASH2="71b8b8f9";
+var HASH="717c5cf4d726944f2bbda9e549a75cbd2fe1ff60d6a4a2c4779409022bca00c5",HASH2="d91be450";
 var tries=0,locked=false;
 function lockGame(){locked=true;tries=0;$("adm").classList.remove("open");if(document.activeElement)document.activeElement.blur();var s=10;$("lockn").textContent=s;$("lock").hidden=false;var t=setInterval(function(){s--;$("lockn").textContent=s;if(s<=0){clearInterval(t);$("lock").hidden=true;locked=false}},1000)}
 function norm(s){return s.trim().replace(/\s+/g," ").replace(/ ו(?=אלירן)/," ")}
