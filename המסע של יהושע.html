@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>המסע של יהושע – בדרך לארץ ישראל</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sand:#e3cb93;--sand2:#c9a766;--gold:#8a5f1e;--gold2:#c9a24a;--blue:#2c455c;--blue2:#46688a;--ink:#2a1d0e;--white:#f4e6c2;
+  --ok:#3f6b3a;--bad:#8e2b1f;--card:#ecd8a6;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--card:#ecd8a6}}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{margin:0;min-height:100%}
+body{font-family:'Heebo',Arial,sans-serif;color:var(--ink);background:#b8995d;overflow-x:hidden}
+#bg{position:fixed;inset:0;z-index:-1}
+#bg svg{width:100%;height:100%}
+.wrap{max-width:760px;margin:0 auto;padding:18px 14px 40px}
+.screen{display:none}.screen.active{display:block}
+h1,h2,h3{font-family:'Frank Ruhl Libre','David',serif;margin:0}
+.card{background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3'/><feColorMatrix values='0 0 0 0 .35 0 0 0 0 .22 0 0 0 0 .08 0 0 0 .32 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),radial-gradient(ellipse at center,#f1e0b0 40%,#d9bd82 85%,#b8924e 100%);border:5px double #6b4a1a;border-radius:10px 26px 12px 28px / 24px 10px 28px 12px;padding:24px;box-shadow:inset 0 0 40px rgba(110,70,20,.45),0 12px 28px rgba(30,15,0,.45)}
+.hero{text-align:center;padding:26px 14px 6px}
+.hero h1{font-size:clamp(2.6rem,10vw,4.6rem);font-weight:900;color:#3a2410;text-shadow:0 2px 0 #e9cf8e,0 6px 14px rgba(40,20,0,.45);line-height:1.05;letter-spacing:.02em}
+.hero p{font-size:clamp(1.05rem,3.6vw,1.4rem);font-weight:500;margin:14px 0 22px;color:#3b2f17;background:rgba(226,200,140,.85);border:2px solid #6b4a1a;display:inline-block;padding:8px 18px;border-radius:999px}
+.btn{font-family:inherit;font-size:1.25rem;font-weight:700;border:0;border-radius:18px;padding:14px 30px;cursor:pointer;color:#fff;background:linear-gradient(180deg,var(--blue2),var(--blue));box-shadow:0 5px 0 #143553,0 10px 18px rgba(0,0,0,.25);transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-2px)}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #143553}
+.btn:focus-visible,.opt:focus-visible,input:focus-visible{outline:3px solid var(--gold2);outline-offset:3px}
+.btn.big{font-size:1.7rem;padding:18px 48px;background:linear-gradient(180deg,var(--gold2),var(--gold));color:#3a2800;box-shadow:0 6px 0 #8a6416,0 12px 22px rgba(0,0,0,.28);animation:pulse 2.4s ease-in-out infinite}
+.btn.ghost{background:linear-gradient(180deg,#fff,var(--sand));color:var(--blue);box-shadow:0 5px 0 #b99a55}
+.btn[disabled]{opacity:.5;cursor:not-allowed;animation:none}
+@keyframes pulse{50%{transform:scale(1.04)}}
+.center{text-align:center}
+.board{margin-top:26px}
+.board h2{text-align:center;font-size:1.7rem;color:var(--blue);margin-bottom:12px}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:360px}
+th,td{padding:9px 8px;text-align:right}
+th{background:var(--blue);color:#fff;font-weight:700}
+th:first-child{border-radius:0 12px 12px 0}th:last-child{border-radius:12px 0 0 12px}
+td{border-bottom:1px solid var(--sand2)}
+tr.r1 td{background:#e8c868;font-weight:700}tr.r2 td{background:#d8cdb4}tr.r3 td{background:#d9ab78}
+.medal{font-size:1.2rem}
+.empty{text-align:center;padding:18px;color:#6a5a38}
+label{display:block;font-weight:700;margin:14px 0 6px;font-size:1.1rem}
+input{width:100%;font-family:inherit;font-size:1.3rem;padding:12px 14px;border:3px solid var(--sand2);border-radius:8px;background:#f4e6c2;color:var(--ink)}
+input.bad{border-color:var(--bad)}
+.hint{font-size:.9rem;color:#6a5a38;margin-top:4px}
+.err{color:var(--bad);font-size:.95rem;min-height:1.2em;margin-top:4px;font-weight:500}
+.row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:22px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700;margin-bottom:10px;flex-wrap:wrap}
+.pill{background:var(--card);border:2px solid var(--gold);border-radius:999px;padding:6px 16px}
+.prog{height:16px;background:rgba(226,200,140,.85);border:2px solid #6b4a1a;border-radius:999px;overflow:hidden;margin-bottom:16px}
+.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--gold2));transition:width .5s}
+.qcard{animation:slide .45s ease}
+@keyframes slide{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
+.chap{font-size:.95rem;color:var(--blue2);font-weight:700;margin-bottom:6px}
+.q{font-size:clamp(1.35rem,5vw,1.9rem);font-weight:700;line-height:1.35;margin-bottom:16px}
+.opts{display:grid;gap:11px}
+.opt{font-family:inherit;font-size:1.15rem;font-weight:500;text-align:right;padding:14px 16px;background:#f1e1b4;border:3px solid var(--sand2);border-radius:16px;cursor:pointer;display:flex;gap:12px;align-items:center;color:var(--ink);transition:transform .15s,border-color .15s,background .15s}
+.opt:hover:not(:disabled){transform:translateX(-4px);border-color:var(--gold);background:#fff8e2}
+.opt b{flex:none;width:34px;height:34px;border-radius:50%;background:var(--sand);color:var(--blue);display:grid;place-items:center;font-family:'Frank Ruhl Libre',serif}
+.opt:disabled{cursor:default}
+.opt.ok{background:#dff3e6;border-color:var(--ok);animation:pop .4s}
+.opt.no{background:#fbe0dc;border-color:var(--bad);animation:shake .45s}
+.opt.dim{opacity:.55}
+@keyframes pop{50%{transform:scale(1.04)}}
+@keyframes shake{20%,60%{transform:translateX(9px)}40%,80%{transform:translateX(-9px)}}
+.fb{margin-top:16px;font-size:1.25rem;font-weight:700;text-align:center;min-height:1.6em}
+.fb.ok{color:var(--ok)}.fb.no{color:var(--bad)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}
+.stat{background:var(--sand);border-radius:16px;padding:12px 6px;text-align:center}
+.stat strong{display:block;font-size:1.8rem;font-family:'Frank Ruhl Libre',serif;color:var(--blue)}
+.big-score{font-size:3.4rem;font-weight:900;color:var(--gold);font-family:'Frank Ruhl Libre',serif;line-height:1}
+.rank{font-size:1.4rem;font-weight:700;color:var(--blue);margin:8px 0}
+#fx{position:fixed;inset:0;pointer-events:none;z-index:50}
+.card{position:relative;margin:38px 0;border-width:0 5px;border-radius:6px}
+.card::before,.card::after{content:"";position:absolute;left:-10px;right:-10px;height:26px;border-radius:14px;background:linear-gradient(180deg,#b88a48,#6b4420 55%,#3f2610);box-shadow:0 5px 10px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,220,150,.5);z-index:2}
+.card::before{top:-20px}.card::after{bottom:-20px}
+.screen.active .card:not(.qcard){animation:unroll .9s cubic-bezier(.2,.8,.3,1)}
+.qcard{animation:unroll .7s cubic-bezier(.2,.8,.3,1)}
+@keyframes unroll{from{clip-path:inset(-40px -40px 100% -40px)}to{clip-path:inset(-40px)}}
+.prog{overflow:visible;position:relative;margin-top:36px}.prog i{border-radius:999px}
+#walker{position:absolute;top:-32px;right:-14px;font-size:1.8rem;transition:right .7s ease}
+.goal{position:absolute;left:-8px;top:-34px;font-size:1.8rem}
+.opt{animation:strip .5s backwards}
+@keyframes strip{from{opacity:0;transform:translateX(60px) rotate(1.5deg)}}
+.opt.gone{display:none}
+.tools{display:flex;margin-bottom:12px}.tools .btn{font-size:.95rem;padding:8px 16px}
+.stamp{position:absolute;top:10px;left:12px;width:68px;height:68px;border-radius:50%;display:grid;place-items:center;font-size:2.1rem;font-weight:900;color:#f6d9a0;background:radial-gradient(circle at 35% 30%,#c4402c,#7a1a0c 70%);box-shadow:0 4px 8px rgba(0,0,0,.5),inset 0 0 0 4px rgba(255,220,160,.25);opacity:0;transform:scale(2.4) rotate(-25deg);pointer-events:none;z-index:3}
+.stamp.bad{background:radial-gradient(circle at 35% 30%,#4a3a28,#17100a 70%)}
+.stamp.show{animation:seal .5s cubic-bezier(.3,1.6,.5,1) forwards}
+@keyframes seal{to{opacity:.95;transform:scale(1) rotate(-8deg)}}
+@media (prefers-reduced-motion:reduce){.stamp.show{opacity:.95;transform:none}}
+#ttl{cursor:pointer}
+.modal{display:none;position:fixed;inset:0;z-index:60;background:rgba(30,15,0,.65);overflow-y:auto;padding:30px 14px}
+.modal.open{display:block}
+.modal .card{max-width:560px;margin:34px auto;animation:unroll .6s ease}
+.arow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--sand2);font-weight:500}
+.del{padding:6px 12px;font-size:1rem;border-radius:12px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:480px){.card{padding:16px}.btn.big{padding:16px 30px;font-size:1.45rem}.stats strong{font-size:1.45rem}}
+</style>
+</head>
+<body>
+<div id="bg" aria-hidden="true">
+<svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
+<defs>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a9a27c"/><stop offset=".55" stop-color="#dcc486"/><stop offset="1" stop-color="#cfae6c"/></linearGradient>
+<linearGradient id="riv" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2f6fa8"/><stop offset="1" stop-color="#5aa0d0"/></linearGradient>
+</defs>
+<rect width="800" height="600" fill="url(#sky)"/>
+<circle cx="640" cy="130" r="54" fill="#fff4c4" opacity=".9"/>
+<path d="M0 330 L120 220 L210 300 L320 200 L450 310 L560 230 L690 320 L800 250 V430 H0Z" fill="#b99468"/>
+<path d="M0 370 L150 290 L260 360 L400 280 L540 365 L680 295 L800 360 V450 H0Z" fill="#cfa974"/>
+<g fill="#a97f4f"><rect x="560" y="352" width="120" height="50"/><rect x="552" y="340" width="16" height="20"/><rect x="590" y="334" width="16" height="20"/><rect x="630" y="338" width="16" height="20"/><rect x="668" y="342" width="16" height="20"/><rect x="590" y="372" width="18" height="30" fill="#6c4b27"/></g>
+<path d="M0 430 H800 V600 H0Z" fill="#ebd098"/>
+<path d="M-20 470 C150 440 250 520 420 490 S700 450 820 480 V540 C700 520 560 560 420 545 S150 500 -20 530Z" fill="url(#riv)"/>
+<path d="M0 560 C200 540 300 580 800 550 V600 H0Z" fill="#dcbb78"/>
+<g fill="#7a5c2e" opacity=".8"><path d="M60 440 q10-40 20 0z"/><rect x="68" y="420" width="4" height="22"/><path d="M110 445 q10-34 18 0z"/></g>
+<filter id="gr"><feTurbulence type="fractalNoise" baseFrequency=".6" numOctaves="3"/><feColorMatrix values="0 0 0 0 .3 0 0 0 0 .18 0 0 0 0 .05 0 0 0 .35 0"/></filter>
+<radialGradient id="vg" cx=".5" cy=".5" r=".75"><stop offset=".45" stop-color="#3a2208" stop-opacity="0"/><stop offset="1" stop-color="#3a2208" stop-opacity=".65"/></radialGradient>
+<rect width="800" height="600" fill="#8a6420" opacity=".25"/>
+<rect width="800" height="600" filter="url(#gr)"/>
+<rect width="800" height="600" fill="url(#vg)"/>
+</svg>
+</div>
+<canvas id="fx"></canvas>
+<div id="adm" class="modal" role="dialog" aria-modal="true" aria-label="ניהול תוצאות"><div class="card"><h2 class="center" style="color:var(--blue);font-size:1.8rem">🗑️ ניהול התוצאות</h2><div id="admgate"><label for="admcode">הכנס קוד</label><input id="admcode" type="password" autocomplete="off"><div class="err" id="admerr"></div><div class="row"><button type="button" class="btn" id="admok">כניסה</button><button type="button" class="btn ghost" id="admx">ביטול</button></div></div><div id="admbody" hidden><div id="admlist"></div><div class="row"><button type="button" class="btn" id="admall">מחק הכל</button><button type="button" class="btn ghost" id="admclose">סגור</button></div></div></div></div>
+
+<main class="wrap">
+<!-- פתיחה -->
+<section id="s-home" class="screen active">
+  <div class="hero">
+    <h1 id="ttl" role="button" tabindex="0" title="">המסע של יהושע</h1>
+    <p>בואו לבדוק כמה אתם יודעים על ספר יהושע!</p>
+    <div><button class="btn big" id="start">⚔️ התחל משחק</button></div>
+  </div>
+  <div class="card board">
+    <h2>🏆 אלופי המסע של יהושע</h2>
+    <div class="tbl" id="board"></div>
+  </div>
+</section>
+
+<!-- טופס -->
+<section id="s-form" class="screen">
+  <div class="card">
+    <h2 class="center" style="color:var(--blue);font-size:2rem">🧭 מי יוצא למסע?</h2>
+    <form id="form" novalidate onsubmit="return false">
+      <label for="fn">שם פרטי</label>
+      <input id="fn" maxlength="6" autocomplete="off" inputmode="text" placeholder="עד 6 אותיות">
+      <div class="err" id="e1"></div>
+      <label for="ln">שם משפחה</label>
+      <input id="ln" maxlength="10" autocomplete="off" inputmode="text" placeholder="עד 10 אותיות">
+      <div class="err" id="e2"></div>
+      <div class="hint">אותיות בלבד, בלי מספרים או סימנים מיוחדים.</div>
+      <div class="row">
+        <button type="button" class="btn" id="go" disabled>יוצאים לדרך!</button>
+        <button type="button" class="btn ghost" id="back1">חזרה</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<!-- משחק -->
+<section id="s-game" class="screen">
+  <div class="topbar">
+    <span class="pill" id="pcount">שאלה 1 מתוך 15</span>
+    <span class="pill">⭐ ניקוד: <span id="pscore">0</span></span><span class="pill">🔥 רצף: <span id="pstreak">0</span></span><button type="button" class="pill" id="snd" style="cursor:pointer;font-family:inherit" aria-label="צליל">🔊</button>
+    <button class="btn ghost" id="restart" style="font-size:1rem;padding:8px 16px">משחק חדש</button>
+  </div>
+  <div class="prog"><i id="bar"></i><span id="walker">🚶</span><span class="goal">🏰</span></div>
+  <div class="card qcard" id="qcard">
+    <div class="stamp" id="stamp"></div><div class="chap" id="chap"></div>
+    <div class="q" id="qtext"></div>
+    <div class="tools"><button type="button" class="btn ghost" id="life">✂️ הסר שתי תשובות (פעם אחת)</button></div><div class="opts" id="opts"></div>
+    <div class="fb" id="fb" aria-live="polite"></div>
+    <div class="row"><button class="btn" id="next" style="display:none">לשאלה הבאה</button></div>
+  </div>
+</section>
+
+<!-- סיום -->
+<section id="s-end" class="screen">
+  <div class="card center">
+    <h2 style="font-size:clamp(1.7rem,6vw,2.4rem);color:var(--blue)">🎉 כל הכבוד! סיימת את המסע של יהושע!</h2>
+    <div class="rank" id="who"></div>
+    <div class="big-score"><span id="fscore">0</span><span style="font-size:1.4rem;color:var(--ink)"> / 150</span></div>
+    <div class="stats">
+      <div class="stat"><strong id="fok">0</strong>נכונות ✅</div>
+      <div class="stat"><strong id="fbad">0</strong>שגויות ❌</div>
+      <div class="stat"><strong id="fpct">0%</strong>הצלחה</div>
+    </div>
+    <div class="rank" id="grade"></div>
+    <div class="row">
+      <button class="btn" id="again">🔁 שחק שוב</button>
+      <button class="btn ghost" id="home">🏠 חזרה למסך הראשי</button>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+(function(){
+"use strict";
+var QS=[
+["פרק א׳ – יהושע הופך למנהיג","מי מת בתחילת ספר יהושע?","משה רבנו",["אהרון","יהושע","כלב"]],
+["פרק א׳ – יהושע הופך למנהיג","מי הפך למנהיג החדש של בני ישראל?","יהושע בן נון",["אלעזר","אהרון","פינחס"]],
+["פרק א׳ – יהושע הופך למנהיג","לאיזו ארץ יהושע הוביל את בני ישראל?","ארץ כנען",["מצרים","בבל","יוון"]],
+["פרק א׳ – יהושע הופך למנהיג","מה הבטיח ה׳ ליהושע?","שהוא תמיד יהיה איתו",["שהוא יהיה מלך","שהוא יחזור למצרים","שהוא לא יצטרך להנהיג"]],
+["פרק א׳ – יהושע הופך למנהיג","אחרי מי יהושע הפך למנהיג?","משה",["דוד","שלמה","שאול"]],
+["פרק ב׳ – המרגלים ורחב","כמה מרגלים יהושע שלח ליריחו?","שניים",["שלושה","חמישה","עשרה"]],
+["פרק ב׳ – המרגלים ורחב","איזו עיר המרגלים נשלחו לבדוק?","יריחו",["ירושלים","בית אל","שכם"]],
+["פרק ב׳ – המרגלים ורחב","אצל מי התחבאו המרגלים?","רחב",["מרים","דבורה","רות"]],
+["פרק ב׳ – המרגלים ורחב","היכן התחבאו המרגלים בבית של רחב?","על הגג",["במרתף","בחצר","בחדר האוכל"]],
+["פרק ב׳ – המרגלים ורחב","איזה סימן רחב קשרה בביתה?","חוט אדום",["דגל כחול","סרט ירוק","חוט לבן"]],
+["פרק ג׳ – חציית נהר הירדן","איזה נהר בני ישראל היו צריכים לעבור?","נהר הירדן",["נהר הנילוס","נהר הפרת","נהר החידקל"]],
+["פרק ג׳ – חציית נהר הירדן","מה היה מצב המים בנהר הירדן?","הנהר היה מלא במים וזרם בעוצמה",["הנהר היה יבש","היו בו מעט מים","המים היו קפואים"]],
+["פרק ג׳ – חציית נהר הירדן","מי הוביל את בני ישראל במעבר הירדן?","הכוהנים",["המרגלים","מלך יריחו","רחב"]],
+["פרק ג׳ – חציית נהר הירדן","מה קרה למי נהר הירדן?","המים נעצרו ונעמדו כמו קיר",["המים הפכו לקרח","הנהר התייבש לתמיד","המים הפכו לדם"]],
+["פרק ג׳ – חציית נהר הירדן","מה קרה אחרי 40 שנה במדבר?","בני ישראל הגיעו לרגע הכניסה לארץ ישראל",["בני ישראל חזרו למצרים","בני ישראל הגיעו לבבל","בני ישראל נשארו במדבר"]]
+];
+var KEY="joshua_journey_scores_v1",LET=/^[A-Za-z\u05D0-\u05EA]+$/;
+var $=function(i){return document.getElementById(i)};
+var st={name:"",i:0,score:0,ok:0,bad:0,answered:false,order:[],streak:0,life:false};
+
+function show(id){
+  document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active")});
+  $(id).classList.add("active");window.scrollTo(0,0);
+}
+var mem=[];function load(){try{var d=JSON.parse(localStorage.getItem(KEY));return Array.isArray(d)?d:[]}catch(e){return mem}}
+function save(arr){mem=arr;try{localStorage.setItem(KEY,JSON.stringify(arr))}catch(e){}}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+
+/* לוח תוצאות */
+function renderBoard(){
+  var d=load().sort(function(a,b){return b.score-a.score||a.t-b.t}).slice(0,20);
+  var el=$("board");
+  if(!d.length){el.innerHTML='<div class="empty">עדיין אין תוצאות. היו הראשונים להיכנס ללוח! 🌟</div>';return}
+  var h='<table><thead><tr><th>מקום</th><th>שם</th><th>ניקוד</th><th>תאריך</th></tr></thead><tbody>',rank=0,prev=null;
+  d.forEach(function(r,i){
+    if(r.score!==prev){rank=i+1;prev=r.score}
+    var m=rank===1?"🥇":rank===2?"🥈":rank===3?"🥉":rank;
+    h+='<tr class="'+(rank<=3?"r"+rank:"")+'"><td class="medal">'+m+'</td><td>'+esc(r.name)+'</td><td>'+r.score+' / 150</td><td>'+esc(r.date)+'</td></tr>';
+  });
+  el.innerHTML=h+'</tbody></table>';
+}
+
+/* טופס */
+function check(show_err){
+  var f=$("fn").value.trim(),l=$("ln").value.trim(),ok1=true,ok2=true;
+  function msg(v,max,name){
+    if(!v)return"חובה למלא "+name+".";
+    if(!LET.test(v))return"אותיות בלבד, בלי מספרים או סימנים.";
+    if(v.length>max)return"עד "+max+" אותיות.";
+    return"";
+  }
+  var m1=msg(f,6,"שם פרטי"),m2=msg(l,10,"שם משפחה");
+  if(show_err){
+    $("e1").textContent=f||show_err===2?m1:"";$("e2").textContent=l||show_err===2?m2:"";
+    $("fn").classList.toggle("bad",!!$("e1").textContent);$("ln").classList.toggle("bad",!!$("e2").textContent);
+  }
+  $("go").disabled=!!(m1||m2);
+  return !(m1||m2);
+}
+function clean(e){
+  var v=e.target.value.replace(/[^A-Za-z\u05D0-\u05EA]/g,"");
+  if(v!==e.target.value)e.target.value=v;
+}
+
+/* משחק */
+function newGame(){
+  st.i=0;st.score=0;st.ok=0;st.bad=0;st.answered=false;st.streak=0;st.life=false;
+  st.order=shuffle(QS.map(function(_,i){return i}));
+  show("s-game");ask();
+}
+function ask(){
+  var q=QS[st.order[st.i]];st.answered=false;
+  $("pcount").textContent="שאלה "+(st.i+1)+" מתוך 15";
+  $("pscore").textContent=st.score;
+  setProg(st.i);$("pstreak").textContent=st.streak;
+  $("chap").textContent=q[0];$("qtext").textContent=q[1];$("stamp").className="stamp";$("life").disabled=st.life;$("life").textContent=st.life?"✂️ נוצל":"✂️ הסר שתי תשובות (פעם אחת)";
+  $("fb").textContent="";$("fb").className="fb";$("next").style.display="none";
+  var c=$("qcard");c.classList.remove("qcard");void c.offsetWidth;c.classList.add("qcard");
+  var box=$("opts");box.innerHTML="";
+  var letters=["א","ב","ג","ד"];
+  shuffle([q[2]].concat(q[3])).forEach(function(t,k){
+    var b=document.createElement("button");b.type="button";b.className="opt";
+    b.innerHTML="<b>"+letters[k]+"</b><span></span>";b.lastChild.textContent=t;
+    b.style.animationDelay=(k*0.09)+"s";b.addEventListener("click",function(){pick(b,t===q[2],q[2])});
+    box.appendChild(b);
+  });
+}
+function pick(btn,right,answer){
+  if(st.answered)return;st.answered=true;
+  var all=document.querySelectorAll(".opt");
+  all.forEach(function(b){b.disabled=true;b.style.animationDelay="0s";if(b.lastChild.textContent===answer&&!right)b.classList.add("ok");else if(b!==btn)b.classList.add("dim")});
+  var fb=$("fb");
+  if(right){st.score+=10;st.ok++;st.streak++;stamp(true);sfx(true);btn.classList.add("ok");fb.textContent="✅ צדקת! +10 נקודות";fb.className="fb ok";confetti(btn)}
+  else{st.bad++;st.streak=0;stamp(false);sfx(false);btn.classList.add("no");fb.textContent="❌ טעית. התשובה הנכונה מסומנת בירוק";fb.className="fb no"}
+  $("pscore").textContent=st.score;
+  setProg(st.i+1);$("pstreak").textContent=st.streak;
+  var n=$("next");n.style.display="";n.textContent=st.i===14?"לסיכום המסע":"לשאלה הבאה";n.focus({preventScroll:true});
+}
+function next(){
+  if(!st.answered)return;
+  if(st.i<14){st.i++;ask()}else finish();
+}
+function grade(s){
+  if(s===150)return"👑 מנהיג מושלם! יהושע היה גאה בך";
+  if(s>=120)return"🌟 מצוין! מכיר את הסיפור היטב";
+  if(s>=90)return"👍 טוב מאוד! עוד קצת ותגיע לפסגה";
+  if(s>=60)return"🙂 לא רע! כדאי לחזור על הפרקים";
+  return"📖 זה רק ההתחלה. נסו שוב ותשתפרו!";
+}
+function finish(){
+  var now=new Date(),date=now.toLocaleDateString("he-IL");
+  var d=load();d.push({name:st.name,score:st.score,date:date,t:now.getTime()});save(d);
+  $("who").textContent="שחקן: "+st.name;
+  $("fscore").textContent=st.score;$("fok").textContent=st.ok;$("fbad").textContent=st.bad;
+  $("fpct").textContent=Math.round(st.ok/15*100)+"%";$("grade").textContent=grade(st.score);
+  show("s-end");if(st.score>=90)confetti(null,true);
+}
+
+/* מסע, חותם וצליל */
+var AC=null,muted=false;
+function setProg(n){$("bar").style.width=(n/15*100)+"%";$("walker").style.right="calc("+(n/15*100)+"% - 14px)"}
+function stamp(ok){var s=$("stamp");s.textContent=ok?"✓":"✗";s.className="stamp "+(ok?"":"bad ")+"show"}
+function sfx(ok){if(muted)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();var t=AC.currentTime;(ok?[523,659,784]:[220,165]).forEach(function(f,i){var o=AC.createOscillator(),g=AC.createGain(),s=t+i*.12;o.type=ok?"triangle":"sawtooth";o.frequency.value=f;g.gain.setValueAtTime(.0001,s);g.gain.exponentialRampToValueAtTime(.15,s+.02);g.gain.exponentialRampToValueAtTime(.0001,s+.25);o.connect(g);g.connect(AC.destination);o.start(s);o.stop(s+.3)})}catch(e){}}
+
+/* קונפטי */
+var cv=$("fx"),cx=cv.getContext("2d"),parts=[],raf=0;
+function size(){cv.width=innerWidth;cv.height=innerHeight}
+addEventListener("resize",size);size();
+function confetti(el,big){
+  if(matchMedia("(prefers-reduced-motion:reduce)").matches)return;
+  var x=innerWidth/2,y=innerHeight/3;
+  if(el){var r=el.getBoundingClientRect();x=r.left+r.width/2;y=r.top+r.height/2}
+  var n=big?120:34,cols=["#f0c75e","#c8962e","#2f6fa8","#ffffff","#2e8b57"];
+  for(var i=0;i<n;i++)parts.push({x:big?Math.random()*innerWidth:x,y:big?-10:y,vx:(Math.random()-.5)*(big?3:9),vy:big?Math.random()*3+2:-Math.random()*7-2,c:cols[i%5],s:Math.random()*6+4,l:90});
+  if(!raf)loop();
+}
+function loop(){
+  cx.clearRect(0,0,cv.width,cv.height);
+  parts=parts.filter(function(p){return p.l>0&&p.y<innerHeight+20});
+  parts.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.vy+=.22;p.l--;cx.fillStyle=p.c;cx.fillRect(p.x,p.y,p.s,p.s*.6)});
+  raf=parts.length?requestAnimationFrame(loop):0;
+  if(!raf)cx.clearRect(0,0,cv.width,cv.height);
+}
+
+/* אירועים */
+$("start").onclick=function(){$("fn").value="";$("ln").value="";$("e1").textContent="";$("e2").textContent="";$("fn").classList.remove("bad");$("ln").classList.remove("bad");$("go").disabled=true;show("s-form");$("fn").focus()};
+$("back1").onclick=function(){show("s-home")};
+["fn","ln"].forEach(function(id){$(id).addEventListener("input",function(e){clean(e);check(1)})});
+$("go").onclick=function(){
+  if(!check(2))return;
+  st.name=$("fn").value.trim()+" "+$("ln").value.trim();newGame();
+};
+$("form").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();$("go").click()}});
+$("next").onclick=next;
+$("life").onclick=function(){if(st.answered||st.life)return;st.life=true;var q=QS[st.order[st.i]];var w=shuffle([].slice.call(document.querySelectorAll(".opt")).filter(function(b){return b.lastChild.textContent!==q[2]})).slice(0,2);w.forEach(function(b){b.classList.add("gone");b.disabled=true});$("life").disabled=true;$("life").textContent="✂️ נוצל"};
+$("snd").onclick=function(){muted=!muted;$("snd").textContent=muted?"🔇":"🔊"};
+document.addEventListener("keydown",function(e){if(!$("s-game").classList.contains("active")||st.answered)return;var k=parseInt(e.key,10),o=document.querySelectorAll(".opt");if(k>=1&&k<=4&&o[k-1]&&!o[k-1].classList.contains("gone"))o[k-1].click()});
+$("restart").onclick=function(){arm($("restart"),"בטוח? לחץ שוב",newGame)};
+$("again").onclick=newGame;
+function renderAdmin(){
+  var d=load().map(function(r,i){r.i=i;return r}).sort(function(a,b){return b.score-a.score||a.t-b.t});
+  var el=$("admlist");
+  if(!d.length){el.innerHTML='<div class="empty">אין תוצאות למחיקה.</div>';$("admall").disabled=true;return}
+  $("admall").disabled=false;
+  el.innerHTML=d.map(function(r){return '<div class="arow"><span>'+esc(r.name)+' · '+r.score+' · '+esc(r.date)+'</span><button type="button" class="btn ghost del" data-i="'+r.i+'" aria-label="מחק תוצאה">🗑️</button></div>'}).join("");
+}
+function openAdmin(){$("admcode").value="";$("admerr").textContent="";$("admcode").classList.remove("bad");$("admgate").hidden=false;$("admbody").hidden=true;$("adm").classList.add("open");$("admcode").focus()}
+function closeAdmin(){$("adm").classList.remove("open")}
+$("ttl").onclick=openAdmin;
+function arm(b,txt,fn){if(b.getAttribute("data-arm")){clearTimeout(+b.getAttribute("data-arm"));b.removeAttribute("data-arm");b.innerHTML=b.getAttribute("data-orig");fn();return}b.setAttribute("data-orig",b.innerHTML);b.innerHTML=txt;b.setAttribute("data-arm",setTimeout(function(){b.removeAttribute("data-arm");b.innerHTML=b.getAttribute("data-orig")},3000))}
+var HASH="24200079dcdbfd8415ca7a5cfc46cc3acb52b9cb742202ec36a87f352ed23fb6",HASH2="71b8b8f9";
+function norm(s){return s.trim().replace(/\s+/g," ").replace(/ ו(?=אלירן)/," ")}
+function fnv(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(16)}
+function sha(s){if(!(window.crypto&&crypto.subtle))return Promise.resolve(fnv(s));return crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)).then(function(h){return Array.prototype.map.call(new Uint8Array(h),function(x){return("0"+x.toString(16)).slice(-2)}).join("")})}
+function tryCode(){var c=$("admcode");c.classList.remove("bad");sha(norm(c.value)).then(function(h){if(h===HASH||h===HASH2){$("admgate").hidden=true;$("admbody").hidden=false;renderAdmin();$("admclose").focus()}else{$("admerr").textContent="קוד שגוי. נסו שוב.";c.classList.add("bad");c.select()}}).catch(function(){$("admerr").textContent="לא ניתן לבדוק את הקוד בדפדפן הזה."})}
+$("admok").onclick=tryCode;$("admx").onclick=closeAdmin;
+$("admcode").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();tryCode()}});
+$("ttl").addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openAdmin()}});
+$("admlist").addEventListener("click",function(e){var b=e.target.closest(".del");if(!b)return;var i=+b.dataset.i;arm(b,"❓ בטוח? לחץ שוב",function(){var d=load();d.splice(i,1);save(d);renderAdmin();renderBoard()})});
+$("admall").onclick=function(){arm($("admall"),"בטוח? לחץ שוב למחיקה",function(){save([]);renderAdmin();renderBoard()})};
+$("admclose").onclick=closeAdmin;
+$("adm").addEventListener("click",function(e){if(e.target===this)closeAdmin()});
+document.addEventListener("keydown",function(e){if(e.key==="Escape")closeAdmin()});
+$("home").onclick=function(){renderBoard();show("s-home")};
+renderBoard();
+})();
+</script>
+</body>
+</html>
