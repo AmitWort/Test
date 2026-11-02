@@ -37,7 +37,7 @@ h1,h2,h3{font-family:'Frank Ruhl Libre','David',serif;margin:0}
 .center{text-align:center}
 .board{margin-top:26px}
 .board h2{text-align:center;font-size:1.7rem;color:var(--blue);margin-bottom:12px}
-.tbl{overflow-x:auto}
+.tbl{overflow:auto;max-height:480px}
 table{width:100%;border-collapse:collapse;min-width:360px}
 th,td{padding:9px 8px;text-align:right}
 th{background:var(--blue);color:#fff;font-weight:700}
@@ -235,12 +235,19 @@ function show(id){
 }
 var mem=[];function load(){try{var d=JSON.parse(localStorage.getItem(KEY));return Array.isArray(d)?d:[]}catch(e){return mem}}
 function save(arr){mem=arr;try{localStorage.setItem(KEY,JSON.stringify(arr))}catch(e){}}
+var DB=null,shared=[],sharedOK=false,flushed=false;
+function rid(r){return r.id||("l"+r.t)}
+function all(){var ids={};shared.forEach(function(r){ids[r.id]=1});var loc=load().filter(function(r){return !ids[rid(r)]&&(r.p||!sharedOK)}).map(function(r){r.id=rid(r);return r});return shared.concat(loc)}
+function upload(r){if(!DB)return;DB.collection("scores").doc(r.id).set({name:r.name,score:r.score,date:r.date,t:r.t}).then(function(){var d=load();d.forEach(function(x){if(rid(x)===r.id)x.p=false});save(d)}).catch(function(){})}
+function initDB(){try{if(!(window.claude&&claude.use))return;claude.use("db").then(function(db){if(!db)return;DB=db;db.collection("scores").onSnapshot(function(s){shared=s.docs.map(function(d){var x=d.data()||{};x.id=d.id;return x});sharedOK=true;if(!flushed){flushed=true;load().forEach(function(r){if(r.p){r.id=rid(r);upload(r)}})}renderBoard();if($("adm").classList.contains("open")&&!$("admbody").hidden)renderAdmin()},function(){})}).catch(function(){})}catch(e){}}
+function delRec(id){save(load().filter(function(r){return rid(r)!==id}));shared=shared.filter(function(r){return r.id!==id});if(DB)DB.doc("scores/"+id).delete().catch(function(){});renderAdmin();renderBoard()}
+function delAll(){var ids=shared.map(function(r){return r.id});save([]);shared=[];if(DB)ids.forEach(function(id){DB.doc("scores/"+id).delete().catch(function(){})});renderAdmin();renderBoard()}
 function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 
 /* לוח תוצאות */
 function renderBoard(){
-  var d=load().sort(function(a,b){return b.score-a.score||a.t-b.t}).slice(0,20);
+  var d=all().sort(function(a,b){return b.score-a.score||a.t-b.t});
   var el=$("board");
   if(!d.length){el.innerHTML='<div class="empty">עדיין אין תוצאות. היו הראשונים להיכנס ללוח! 🌟</div>';return}
   var h='<table><thead><tr><th>מקום</th><th>שם</th><th>ניקוד</th><th>תאריך</th></tr></thead><tbody>',rank=0,prev=null;
@@ -321,7 +328,7 @@ function grade(s){
 }
 function finish(){
   var now=new Date(),date=now.toLocaleDateString("he-IL");
-  var d=load();d.push({name:st.name,score:st.score,date:date,t:now.getTime()});save(d);
+  var rec={id:"s"+now.getTime()+Math.random().toString(36).slice(2,7),name:st.name,score:st.score,date:date,t:now.getTime(),p:true};var d=load();d.push(rec);save(d);if(DB)upload(rec);
   $("who").textContent="שחקן: "+st.name;
   $("fscore").textContent=st.score;$("fok").textContent=st.ok;$("fbad").textContent=st.bad;
   $("fpct").textContent=Math.round(st.ok/15*100)+"%";$("grade").textContent=grade(st.score);
@@ -370,11 +377,11 @@ document.addEventListener("keydown",function(e){if(!$("s-game").classList.contai
 $("restart").onclick=function(){arm($("restart"),"בטוח? לחץ שוב",newGame)};
 $("again").onclick=newGame;
 function renderAdmin(){
-  var d=load().map(function(r,i){r.i=i;return r}).sort(function(a,b){return b.score-a.score||a.t-b.t});
+  var d=all().sort(function(a,b){return b.score-a.score||a.t-b.t});
   var el=$("admlist");
   if(!d.length){el.innerHTML='<div class="empty">אין תוצאות למחיקה.</div>';$("admall").disabled=true;return}
   $("admall").disabled=false;
-  el.innerHTML=d.map(function(r){return '<div class="arow"><span>'+esc(r.name)+' · '+r.score+' · '+esc(r.date)+'</span><button type="button" class="btn ghost del" data-i="'+r.i+'" aria-label="מחק תוצאה">🗑️</button></div>'}).join("");
+  el.innerHTML=d.map(function(r){return '<div class="arow"><span>'+esc(r.name)+' · '+r.score+' · '+esc(r.date)+'</span><button type="button" class="btn ghost del" data-id="'+esc(r.id)+'" aria-label="מחק תוצאה">🗑️</button></div>'}).join("");
 }
 function openAdmin(){$("admcode").value="";$("admerr").textContent="";$("admcode").classList.remove("bad");$("admgate").hidden=false;$("admbody").hidden=true;$("adm").classList.add("open");$("admcode").focus()}
 function closeAdmin(){$("adm").classList.remove("open")}
@@ -390,12 +397,13 @@ function tryCode(){if(locked)return;var c=$("admcode");c.classList.remove("bad")
 $("admok").onclick=tryCode;$("admx").onclick=closeAdmin;
 $("admcode").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();tryCode()}});
 $("ttl").addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openAdmin()}});
-$("admlist").addEventListener("click",function(e){var b=e.target.closest(".del");if(!b)return;var i=+b.dataset.i;arm(b,"❓ בטוח? לחץ שוב",function(){var d=load();d.splice(i,1);save(d);renderAdmin();renderBoard()})});
-$("admall").onclick=function(){arm($("admall"),"בטוח? לחץ שוב למחיקה",function(){save([]);renderAdmin();renderBoard()})};
+$("admlist").addEventListener("click",function(e){var b=e.target.closest(".del");if(!b)return;var id=b.dataset.id;arm(b,"❓ בטוח? לחץ שוב",function(){delRec(id)})});
+$("admall").onclick=function(){arm($("admall"),"בטוח? לחץ שוב למחיקה",function(){delAll()})};
 $("admclose").onclick=closeAdmin;
 $("adm").addEventListener("click",function(e){if(e.target===this)closeAdmin()});
 document.addEventListener("keydown",function(e){if(e.key==="Escape")closeAdmin()});
 $("home").onclick=function(){renderBoard();show("s-home")};
+initDB();
 renderBoard();
 })();
 </script>
