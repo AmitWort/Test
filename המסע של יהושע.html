@@ -78,6 +78,7 @@ input.bad{border-color:var(--bad)}
 .big-score{font-size:3.4rem;font-weight:900;color:var(--gold);font-family:'Frank Ruhl Libre',serif;line-height:1}
 .rank{font-size:1.4rem;font-weight:700;color:var(--blue);margin:8px 0}
 #fx{position:fixed;inset:0;pointer-events:none;z-index:50}
+#lock{position:fixed;inset:0;z-index:100;background:rgba(30,15,0,.9);display:grid;place-items:center;padding:20px;text-align:center;color:#f4e6c2}#lock[hidden]{display:none}#lock .lk{max-width:420px}#lock p{font-size:1.2rem;margin:8px 0}#lock b{display:block;font-size:4.5rem;font-family:'Frank Ruhl Libre',serif;color:#c9a24a}
 .card{position:relative;margin:38px 0;border-width:0 5px;border-radius:6px}
 .card::before,.card::after{content:"";position:absolute;left:-10px;right:-10px;height:26px;border-radius:14px;background:linear-gradient(180deg,#b88a48,#6b4420 55%,#3f2610);box-shadow:0 5px 10px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,220,150,.5);z-index:2}
 .card::before{top:-20px}.card::after{bottom:-20px}
@@ -129,6 +130,7 @@ input.bad{border-color:var(--bad)}
 <rect width="800" height="600" fill="url(#vg)"/>
 </svg>
 </div>
+<div id="lock" hidden><div class="lk"><div style="font-size:3rem">🔒</div><h2 style="font-size:1.8rem">יותר מדי ניסיונות</h2><p>המשחק נעול. אפשר לנסות שוב בעוד</p><b id="lockn">10</b><p>שניות</p></div></div>
 <canvas id="fx"></canvas>
 <div id="adm" class="modal" role="dialog" aria-modal="true" aria-label="ניהול תוצאות"><div class="card"><h2 class="center" style="color:var(--blue);font-size:1.8rem">🗑️ ניהול התוצאות</h2><div id="admgate"><label for="admcode">הכנס קוד</label><input id="admcode" type="password" autocomplete="off"><div class="err" id="admerr"></div><div class="row"><button type="button" class="btn" id="admok">כניסה</button><button type="button" class="btn ghost" id="admx">ביטול</button></div></div><div id="admbody" hidden><div id="admlist"></div><div class="row"><button type="button" class="btn" id="admall">מחק הכל</button><button type="button" class="btn ghost" id="admclose">סגור</button></div></div></div></div>
 
@@ -379,10 +381,12 @@ function closeAdmin(){$("adm").classList.remove("open")}
 $("ttl").onclick=openAdmin;
 function arm(b,txt,fn){if(b.getAttribute("data-arm")){clearTimeout(+b.getAttribute("data-arm"));b.removeAttribute("data-arm");b.innerHTML=b.getAttribute("data-orig");fn();return}b.setAttribute("data-orig",b.innerHTML);b.innerHTML=txt;b.setAttribute("data-arm",setTimeout(function(){b.removeAttribute("data-arm");b.innerHTML=b.getAttribute("data-orig")},3000))}
 var HASH="24200079dcdbfd8415ca7a5cfc46cc3acb52b9cb742202ec36a87f352ed23fb6",HASH2="71b8b8f9";
+var tries=0,locked=false;
+function lockGame(){locked=true;tries=0;$("adm").classList.remove("open");if(document.activeElement)document.activeElement.blur();var s=10;$("lockn").textContent=s;$("lock").hidden=false;var t=setInterval(function(){s--;$("lockn").textContent=s;if(s<=0){clearInterval(t);$("lock").hidden=true;locked=false}},1000)}
 function norm(s){return s.trim().replace(/\s+/g," ").replace(/ ו(?=אלירן)/," ")}
 function fnv(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(16)}
 function sha(s){if(!(window.crypto&&crypto.subtle))return Promise.resolve(fnv(s));return crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)).then(function(h){return Array.prototype.map.call(new Uint8Array(h),function(x){return("0"+x.toString(16)).slice(-2)}).join("")})}
-function tryCode(){var c=$("admcode");c.classList.remove("bad");sha(norm(c.value)).then(function(h){if(h===HASH||h===HASH2){$("admgate").hidden=true;$("admbody").hidden=false;renderAdmin();$("admclose").focus()}else{$("admerr").textContent="קוד שגוי. נסו שוב.";c.classList.add("bad");c.select()}}).catch(function(){$("admerr").textContent="לא ניתן לבדוק את הקוד בדפדפן הזה."})}
+function tryCode(){if(locked)return;var c=$("admcode");c.classList.remove("bad");sha(norm(c.value)).then(function(h){if(h===HASH||h===HASH2){tries=0;$("admgate").hidden=true;$("admbody").hidden=false;renderAdmin();$("admclose").focus()}else{tries++;if(tries>=3){lockGame()}else{$("admerr").textContent="קוד שגוי. נותרו "+(3-tries)+" ניסיונות.";c.classList.add("bad");c.select()}}}).catch(function(){$("admerr").textContent="לא ניתן לבדוק את הקוד בדפדפן הזה."})}
 $("admok").onclick=tryCode;$("admx").onclick=closeAdmin;
 $("admcode").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();tryCode()}});
 $("ttl").addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openAdmin()}});
