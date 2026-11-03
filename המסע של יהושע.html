@@ -77,6 +77,7 @@ input.bad{border-color:var(--bad)}
 .stat strong{display:block;font-size:1.8rem;font-family:'Frank Ruhl Libre',serif;color:var(--blue)}
 .big-score{font-size:3.4rem;font-weight:900;color:var(--gold);font-family:'Frank Ruhl Libre',serif;line-height:1}
 .rank{font-size:1.4rem;font-weight:700;color:var(--blue);margin:8px 0}
+.why{display:none;margin-top:12px;background:rgba(255,248,224,.75);border-right:5px solid var(--gold);border-radius:8px;padding:10px 14px;font-size:1.05rem;line-height:1.5}.why.show{display:block;animation:strip .4s}
 #fx{position:fixed;inset:0;pointer-events:none;z-index:50}
 #lock{position:fixed;inset:0;z-index:100;background:rgba(30,15,0,.9);display:grid;place-items:center;padding:20px;text-align:center;color:#f4e6c2}#lock[hidden]{display:none}#lock .lk{max-width:420px}#lock p{font-size:1.2rem;margin:8px 0}#lock b{display:block;font-size:4.5rem;font-family:'Frank Ruhl Libre',serif;color:#c9a24a}
 .card{position:relative;margin:38px 0;border-width:0 5px;border-radius:6px}
@@ -179,8 +180,8 @@ input.bad{border-color:var(--bad)}
   <div class="card qcard" id="qcard">
     <div class="stamp" id="stamp"></div><div class="chap" id="chap"></div>
     <div class="q" id="qtext"></div>
-    <div class="tools"><button type="button" class="btn ghost" id="life">✂️ הסר שתי תשובות (פעם אחת)</button></div><div class="opts" id="opts"></div>
-    <div class="fb" id="fb" aria-live="polite"></div>
+    <div class="tools"><button type="button" class="btn ghost" id="life">✂️ הסר שתי תשובות (פעם אחת)</button> <button type="button" class="btn ghost" id="hint">💡 רמז (פעם אחת)</button></div><div class="why" id="hinttxt"></div><div class="opts" id="opts"></div>
+    <div class="fb" id="fb" aria-live="polite"></div><div class="why" id="why"></div>
     <div class="row"><button class="btn" id="next" style="display:none">לשאלה הבאה</button></div>
   </div>
 </section>
@@ -226,6 +227,7 @@ var QS=[
 ["פרק ג׳ – חציית נהר הירדן","מה קרה למי נהר הירדן?","המים נעצרו ונעמדו כמו קיר",["המים הפכו לקרח","הנהר התייבש לתמיד","המים הפכו לדם"]],
 ["פרק ג׳ – חציית נהר הירדן","מה קרה אחרי 40 שנה במדבר?","בני ישראל הגיעו לרגע הכניסה לארץ ישראל",["בני ישראל חזרו למצרים","בני ישראל הגיעו לבבל","בני ישראל נשארו במדבר"]]
 ];
+var EX=["ספר יהושע נפתח במות משה עבד ה׳. משה הוביל את העם במדבר 40 שנה, אך לא זכה להיכנס לארץ.", "ה׳ פנה ליהושע בן נון, משרתו של משה, ואמר לו לקום ולהוביל את העם לעבור את הירדן.", "ה׳ אמר ליהושע לעבור את הירדן אל הארץ שהוא נותן לבני ישראל. זו ארץ כנען, היא ארץ ישראל.", "ה׳ הבטיח ליהושע: ״כאשר הייתי עם משה אהיה עמך״, וגם שלא ירפה ממנו ולא יעזוב אותו. בגלל זה אמר לו ה׳ ״חזק ואמץ״.", "יהושע קיבל את ההנהגה אחרי מות משה. מיד אחרי מותו ה׳ דיבר אל יהושע ומינה אותו להוביל.", "יהושע שלח שני אנשים מרגלים בחשאי מהשטים, כדי לראות את הארץ ואת יריחו.", "יהושע אמר למרגלים: ״לכו ראו את הארץ ואת יריחו״. יריחו הייתה העיר הראשונה בדרך.", "המרגלים באו לבית אישה ושמה רחב, ושם התאכסנו. מרים, דבורה ורות הן נשים אחרות בתנ״ך שאינן קשורות לסיפור הזה.", "כשמלך יריחו שלח לחפש את המרגלים, רחב העלתה אותם לגג והסתירה אותם בין גבעולי הפשתן שהיו שם.", "המרגלים ביקשו מרחב לקשור חוט שני (חוט אדום) בחלון ביתה. זה היה הסימן שיציל אותה ואת משפחתה כשבני ישראל יכבשו את העיר.", "כדי להיכנס לארץ היה צריך לעבור את נהר הירדן, שהוא הגבול בין המדבר לארץ כנען.", "בעת הקציר הירדן היה מלא על כל גדותיו, ולכן המעבר בו היה קשה ומסוכן, ובלי נס אי אפשר היה לחצות.", "הכוהנים נשאו את ארון הברית והלכו לפני העם. ברגע שרגליהם נגעו במים, המים נעצרו והעם עבר אחריהם.", "כשרגלי הכוהנים נגעו במי הירדן, המים מלמעלה עמדו כמו גל אחד, והמים מלמטה נגמרו. העם עבר ביבשה.", "אחרי 40 שנה במדבר דור חדש חצה את הירדן והגיע לרגע הכניסה לארץ ישראל, מול העיר יריחו."];QS.forEach(function(q,i){q[4]=EX[i]});var EXH=["זה האדם שהוציא את בני ישראל ממצרים והנהיג אותם במדבר.", "הוא היה משרתו של משה, ואבא שלו נקרא נון.", "זו הארץ שה׳ הבטיח לאבות, והיא נמצאת מעבר לנהר הירדן.", "שימו לב למילים ״חזק ואמץ״. ההבטחה נותנת ליהושע ביטחון שהוא לא לבד.", "הוא הוציא את העם ממצרים, ומת לפני שנכנסו לארץ.", "המספר הוא הקטן ביותר שמאפשר לצאת יחד למשימה.", "זו עיר ליד הירדן, והיא הראשונה שבני ישראל צריכים לכבוש.", "היא אישה שגרה ביריחו, האמינה בה׳ והסתירה את המרגלים.", "זה מקום גבוה בבית, ושם היו מייבשים פשתן.", "זה חוט בצבע של אש או של דם, שקשרו בחלון.", "זה הנהר שמפריד בין המדבר לארץ כנען.", "זה היה בעונת הקציר, כשהנהר גדול במיוחד.", "אלה האנשים שנושאים את ארון הברית.", "זה היה נס: המים לא נעלמו, הם עמדו כמו קיר.", "אחרי שנים של נדודים, הדור החדש עומד לפני מה שה׳ הבטיח."];QS.forEach(function(q,i){q[5]=EXH[i]});
 var KEY="joshua_journey_scores_v1",LET=/^[A-Za-z\u05D0-\u05EA]+$/;
 var $=function(i){return document.getElementById(i)};
 var st={name:"",i:0,score:0,ok:0,bad:0,answered:false,order:[],streak:0,life:false};
@@ -288,7 +290,7 @@ function clean(e){
 
 /* משחק */
 function newGame(){
-  st.i=0;st.score=0;st.ok=0;st.bad=0;st.answered=false;st.streak=0;st.life=false;
+  st.i=0;st.score=0;st.ok=0;st.bad=0;st.answered=false;st.streak=0;st.life=false;st.hint=false;
   st.order=shuffle(QS.map(function(_,i){return i}));
   show("s-game");ask();
 }
@@ -297,7 +299,7 @@ function ask(){
   $("pcount").textContent="שאלה "+(st.i+1)+" מתוך 15";
   $("pscore").textContent=st.score;
   setProg(st.i);$("pstreak").textContent=st.streak;
-  $("chap").textContent=q[0];$("qtext").textContent=q[1];$("stamp").className="stamp";$("life").disabled=st.life;$("life").textContent=st.life?"✂️ נוצל":"✂️ הסר שתי תשובות (פעם אחת)";
+  $("chap").textContent=q[0];$("qtext").textContent=q[1];$("stamp").className="stamp";$("why").className="why";$("hinttxt").className="why";$("hint").disabled=st.hint;$("hint").textContent=st.hint?"💡 נוצל":"💡 רמז (פעם אחת)";$("life").disabled=st.life;$("life").textContent=st.life?"✂️ נוצל":"✂️ הסר שתי תשובות (פעם אחת)";
   $("fb").textContent="";$("fb").className="fb";$("next").style.display="none";
   var c=$("qcard");c.classList.remove("qcard");void c.offsetWidth;c.classList.add("qcard");
   var box=$("opts");box.innerHTML="";
@@ -317,7 +319,7 @@ function pick(btn,right,answer){
   if(right){st.score+=10;st.ok++;st.streak++;stamp(true);sfx(true);btn.classList.add("ok");fb.textContent="✅ צדקת! +10 נקודות";fb.className="fb ok";confetti(btn)}
   else{st.bad++;st.streak=0;stamp(false);sfx(false);btn.classList.add("no");fb.textContent="❌ טעית. התשובה הנכונה מסומנת בירוק";fb.className="fb no"}
   $("pscore").textContent=st.score;
-  setProg(st.i+1);$("pstreak").textContent=st.streak;
+  $("why").textContent="📖 "+QS[st.order[st.i]][4];$("why").className="why show";setProg(st.i+1);$("pstreak").textContent=st.streak;
   var n=$("next");n.style.display="";n.textContent=st.i===14?"לסיכום המסע":"לשאלה הבאה";n.focus({preventScroll:true});
 }
 function next(){
@@ -377,6 +379,7 @@ $("go").onclick=function(){
 $("form").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();$("go").click()}});
 $("next").onclick=next;
 $("life").onclick=function(){if(st.answered||st.life)return;st.life=true;var q=QS[st.order[st.i]];var w=shuffle([].slice.call(document.querySelectorAll(".opt")).filter(function(b){return b.lastChild.textContent!==q[2]})).slice(0,2);w.forEach(function(b){b.classList.add("gone");b.disabled=true});$("life").disabled=true;$("life").textContent="✂️ נוצל"};
+$("hint").onclick=function(){if(st.answered||st.hint)return;st.hint=true;$("hinttxt").textContent="💡 "+QS[st.order[st.i]][5];$("hinttxt").className="why show";$("hint").disabled=true;$("hint").textContent="💡 נוצל"};
 $("snd").onclick=function(){muted=!muted;$("snd").textContent=muted?"🔇":"🔊"};
 document.addEventListener("keydown",function(e){if(!$("s-game").classList.contains("active")||st.answered)return;var k=parseInt(e.key,10),o=document.querySelectorAll(".opt");if(k>=1&&k<=4&&o[k-1]&&!o[k-1].classList.contains("gone"))o[k-1].click()});
 $("restart").onclick=function(){arm($("restart"),"בטוח? לחץ שוב",newGame)};
