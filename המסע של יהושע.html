@@ -78,6 +78,7 @@ input.bad{border-color:var(--bad)}
 .big-score{font-size:3.4rem;font-weight:900;color:var(--gold);font-family:'Frank Ruhl Libre',serif;line-height:1}
 .rank{font-size:1.4rem;font-weight:700;color:var(--blue);margin:8px 0}
 .why{display:none;margin-top:12px;background:rgba(255,248,224,.75);border-right:5px solid var(--gold);border-radius:8px;padding:10px 14px;font-size:1.05rem;line-height:1.5}.why.show{display:block;animation:strip .4s}
+.hero h1{cursor:pointer}
 #fx{position:fixed;inset:0;pointer-events:none;z-index:50}
 #lock{position:fixed;inset:0;z-index:100;background:rgba(30,15,0,.9);display:grid;place-items:center;padding:20px;text-align:center;color:#f4e6c2}#lock[hidden]{display:none}#lock .lk{max-width:420px}#lock p{font-size:1.2rem;margin:8px 0}#lock b{display:block;font-size:4.5rem;font-family:'Frank Ruhl Libre',serif;color:#c9a24a}
 .card{position:relative;margin:38px 0;border-width:0 5px;border-radius:6px}
@@ -141,6 +142,7 @@ input.bad{border-color:var(--bad)}
   <div class="hero">
     <h1 id="ttl" role="button" tabindex="0" title="">המסע של יהושע</h1>
     <p>בואו לבדוק כמה אתם יודעים על ספר יהושע!</p>
+    
     <div><button class="btn big" id="start">⚔️ התחל משחק</button></div>
   </div>
   <div class="card board">
@@ -152,15 +154,12 @@ input.bad{border-color:var(--bad)}
 <!-- טופס -->
 <section id="s-form" class="screen">
   <div class="card">
-    <h2 class="center" style="color:var(--blue);font-size:2rem">🧭 מי יוצא למסע?</h2>
+    <h2 class="center" style="color:var(--blue);font-size:2rem">🧭 איזו כיתה יוצאת למסע?</h2>
     <form id="form" novalidate onsubmit="return false">
-      <label for="fn">שם פרטי</label>
-      <input id="fn" maxlength="6" autocomplete="off" inputmode="text" placeholder="עד 6 אותיות">
+      <label for="cn">שם הכיתה</label>
+      <input id="cn" maxlength="10" autocomplete="off" inputmode="text" placeholder="לדוגמה: ז׳2">
       <div class="err" id="e1"></div>
-      <label for="ln">שם משפחה</label>
-      <input id="ln" maxlength="10" autocomplete="off" inputmode="text" placeholder="עד 10 אותיות">
-      <div class="err" id="e2"></div>
-      <div class="hint">אותיות בלבד, בלי מספרים או סימנים מיוחדים.</div>
+      <div class="hint">אותיות ומספרים בלבד, עד 10 תווים.</div>
       <div class="row">
         <button type="button" class="btn" id="go" disabled>יוצאים לדרך!</button>
         <button type="button" class="btn ghost" id="back1">חזרה</button>
@@ -257,7 +256,7 @@ function renderBoard(){
   var d=all().sort(function(a,b){return b.score-a.score||a.t-b.t});
   var el=$("board");
   if(!d.length){el.innerHTML='<div class="empty">עדיין אין תוצאות. היו הראשונים להיכנס ללוח! 🌟</div>';return}
-  var h='<table><thead><tr><th>מקום</th><th>שם</th><th>ניקוד</th><th>תאריך</th></tr></thead><tbody>',rank=0,prev=null;
+  var h='<table><thead><tr><th>מקום</th><th>כיתה</th><th>ניקוד</th><th>תאריך</th></tr></thead><tbody>',rank=0,prev=null;
   d.forEach(function(r,i){
     if(r.score!==prev){rank=i+1;prev=r.score}
     var m=rank===1?"🥇":rank===2?"🥈":rank===3?"🥉":rank;
@@ -267,26 +266,16 @@ function renderBoard(){
 }
 
 /* טופס */
+var CLS=/^[\u05D0-\u05EAA-Za-z0-9 \u05F3\u05F4'"\-]+$/;
 function check(show_err){
-  var f=$("fn").value.trim(),l=$("ln").value.trim(),ok1=true,ok2=true;
-  function msg(v,max,name){
-    if(!v)return"חובה למלא "+name+".";
-    if(!LET.test(v))return"אותיות בלבד, בלי מספרים או סימנים.";
-    if(v.length>max)return"עד "+max+" אותיות.";
-    return"";
-  }
-  var m1=msg(f,6,"שם פרטי"),m2=msg(l,10,"שם משפחה");
-  if(show_err){
-    $("e1").textContent=f||show_err===2?m1:"";$("e2").textContent=l||show_err===2?m2:"";
-    $("fn").classList.toggle("bad",!!$("e1").textContent);$("ln").classList.toggle("bad",!!$("e2").textContent);
-  }
-  $("go").disabled=!!(m1||m2);
-  return !(m1||m2);
+  var v=$("cn").value.trim(),m="";
+  if(!v)m="חובה למלא שם כיתה.";
+  else if(!CLS.test(v))m="אותיות ומספרים בלבד.";
+  else if(v.length>10)m="עד 10 תווים.";
+  if(show_err){$("e1").textContent=(v||show_err===2)?m:"";$("cn").classList.toggle("bad",!!$("e1").textContent)}
+  $("go").disabled=!!m;return !m;
 }
-function clean(e){
-  var v=e.target.value.replace(/[^A-Za-z\u05D0-\u05EA]/g,"");
-  if(v!==e.target.value)e.target.value=v;
-}
+function clean(e){var v=e.target.value.replace(/[^\u05D0-\u05EAA-Za-z0-9 \u05F3\u05F4'"\-]/g,"");if(v!==e.target.value)e.target.value=v}
 
 /* משחק */
 function newGame(){
@@ -336,7 +325,7 @@ function grade(s){
 function finish(){
   var now=new Date(),date=now.toLocaleDateString("he-IL");
   var rec={id:"s"+now.getTime()+Math.random().toString(36).slice(2,7),name:st.name,score:st.score,date:date,t:now.getTime(),p:true};var d=load();d.push(rec);save(d);$("sync").textContent=(DB||useSheet())?"":"⚠️ הלוח המשותף לא זמין, התוצאה נשמרה רק במכשיר הזה";if(DB||useSheet())upload(rec);
-  $("who").textContent="שחקן: "+st.name;
+  $("who").textContent="כיתה: "+st.name;
   $("fscore").textContent=st.score;$("fok").textContent=st.ok;$("fbad").textContent=st.bad;
   $("fpct").textContent=Math.round(st.ok/15*100)+"%";$("grade").textContent=grade(st.score);
   show("s-end");if(st.score>=90)confetti(null,true);
@@ -369,12 +358,12 @@ function loop(){
 }
 
 /* אירועים */
-$("start").onclick=function(){$("fn").value="";$("ln").value="";$("e1").textContent="";$("e2").textContent="";$("fn").classList.remove("bad");$("ln").classList.remove("bad");$("go").disabled=true;show("s-form");$("fn").focus()};
+$("start").onclick=function(){$("cn").value="";$("e1").textContent="";$("cn").classList.remove("bad");$("go").disabled=true;show("s-form");$("cn").focus()};
 $("back1").onclick=function(){show("s-home")};
-["fn","ln"].forEach(function(id){$(id).addEventListener("input",function(e){clean(e);check(1)})});
+$("cn").addEventListener("input",function(e){clean(e);check(1)});
 $("go").onclick=function(){
   if(!check(2))return;
-  st.name=$("fn").value.trim()+" "+$("ln").value.trim();newGame();
+  st.name=$("cn").value.trim();newGame();
 };
 $("form").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();$("go").click()}});
 $("next").onclick=next;
