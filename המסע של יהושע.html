@@ -197,6 +197,7 @@ input.bad{border-color:var(--bad)}
       <div class="stat"><strong id="fpct">0%</strong>הצלחה</div>
     </div>
     <div class="rank" id="grade"></div>
+    <div class="hint" id="sync"></div>
     <div class="row">
       <button class="btn" id="again">🔁 שחק שוב</button>
       <button class="btn ghost" id="home">🏠 חזרה למסך הראשי</button>
@@ -236,12 +237,16 @@ function show(id){
 var mem=[];function load(){try{var d=JSON.parse(localStorage.getItem(KEY));return Array.isArray(d)?d:[]}catch(e){return mem}}
 function save(arr){mem=arr;try{localStorage.setItem(KEY,JSON.stringify(arr))}catch(e){}}
 var DB=null,shared=[],sharedOK=false,flushed=false;
+var SHEET_URL="PASTE_URL_HERE",ADMINCODE="";
+function useSheet(){return typeof SHEET_URL==="string"&&SHEET_URL.indexOf("http")===0}
+function sheetPost(o){return fetch(SHEET_URL,{method:"POST",body:JSON.stringify(o)}).then(function(r){return r.json()})}
+function pollSheet(){if(!useSheet())return;fetch(SHEET_URL).then(function(r){return r.json()}).then(function(a){shared=a.map(function(r){return{id:String(r.id),name:String(r.name),score:+r.score||0,date:String(r.date),t:+r.t||0}});sharedOK=true;if(!flushed){flushed=true;load().forEach(function(r){if(r.p){r.id=rid(r);upload(r)}})}renderBoard();if($("adm").classList.contains("open")&&!$("admbody").hidden)renderAdmin()}).catch(function(){})}
 function rid(r){return r.id||("l"+r.t)}
 function all(){var ids={};shared.forEach(function(r){ids[r.id]=1});var loc=load().filter(function(r){return !ids[rid(r)]&&(r.p||!sharedOK)}).map(function(r){r.id=rid(r);return r});return shared.concat(loc)}
-function upload(r){if(!DB)return;DB.collection("scores").doc(r.id).set({name:r.name,score:r.score,date:r.date,t:r.t}).then(function(){var d=load();d.forEach(function(x){if(rid(x)===r.id)x.p=false});save(d)}).catch(function(){})}
-function initDB(){try{if(!(window.claude&&claude.use))return;claude.use("db").then(function(db){if(!db)return;DB=db;db.collection("scores").onSnapshot(function(s){shared=s.docs.map(function(d){var x=d.data()||{};x.id=d.id;return x});sharedOK=true;if(!flushed){flushed=true;load().forEach(function(r){if(r.p){r.id=rid(r);upload(r)}})}renderBoard();if($("adm").classList.contains("open")&&!$("admbody").hidden)renderAdmin()},function(){})}).catch(function(){})}catch(e){}}
-function delRec(id){save(load().filter(function(r){return rid(r)!==id}));shared=shared.filter(function(r){return r.id!==id});if(DB)DB.doc("scores/"+id).delete().catch(function(){});renderAdmin();renderBoard()}
-function delAll(){var ids=shared.map(function(r){return r.id});save([]);shared=[];if(DB)ids.forEach(function(id){DB.doc("scores/"+id).delete().catch(function(){})});renderAdmin();renderBoard()}
+function upload(r){if(useSheet()){sheetPost({action:"add",id:r.id,name:r.name,score:r.score,date:r.date,t:r.t}).then(function(j){if(!j||!j.ok)throw 0;$("sync").textContent="✅ התוצאה נשמרה בלוח המשותף";var d=load();d.forEach(function(x){if(rid(x)===r.id)x.p=false});save(d);pollSheet()}).catch(function(){$("sync").textContent="⚠️ התוצאה נשמרה רק במכשיר הזה (אין חיבור ללוח המשותף)"});return}if(!DB)return;DB.collection("scores").doc(r.id).set({name:r.name,score:r.score,date:r.date,t:r.t}).then(function(){$("sync").textContent="✅ התוצאה נשמרה בלוח המשותף";var d=load();d.forEach(function(x){if(rid(x)===r.id)x.p=false});save(d)}).catch(function(){$("sync").textContent="⚠️ התוצאה נשמרה רק במכשיר הזה (אין הרשאה לכתוב ללוח המשותף)"})}
+function initDB(){if(useSheet()){pollSheet();setInterval(pollSheet,30000);return}try{if(!(window.claude&&claude.use))return;claude.use("db").then(function(db){if(!db)return;DB=db;db.collection("scores").onSnapshot(function(s){shared=s.docs.map(function(d){var x=d.data()||{};x.id=d.id;return x});sharedOK=true;if(!flushed){flushed=true;load().forEach(function(r){if(r.p){r.id=rid(r);upload(r)}})}renderBoard();if($("adm").classList.contains("open")&&!$("admbody").hidden)renderAdmin()},function(){})}).catch(function(){})}catch(e){}}
+function delRec(id){save(load().filter(function(r){return rid(r)!==id}));shared=shared.filter(function(r){return r.id!==id});if(useSheet())sheetPost({action:"delete",id:id,code:ADMINCODE}).then(pollSheet).catch(function(){});if(DB)DB.doc("scores/"+id).delete().catch(function(){});renderAdmin();renderBoard()}
+function delAll(){var ids=shared.map(function(r){return r.id});save([]);shared=[];if(useSheet())sheetPost({action:"clear",code:ADMINCODE}).then(pollSheet).catch(function(){});if(DB)ids.forEach(function(id){DB.doc("scores/"+id).delete().catch(function(){})});renderAdmin();renderBoard()}
 function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 
@@ -328,7 +333,7 @@ function grade(s){
 }
 function finish(){
   var now=new Date(),date=now.toLocaleDateString("he-IL");
-  var rec={id:"s"+now.getTime()+Math.random().toString(36).slice(2,7),name:st.name,score:st.score,date:date,t:now.getTime(),p:true};var d=load();d.push(rec);save(d);if(DB)upload(rec);
+  var rec={id:"s"+now.getTime()+Math.random().toString(36).slice(2,7),name:st.name,score:st.score,date:date,t:now.getTime(),p:true};var d=load();d.push(rec);save(d);$("sync").textContent=(DB||useSheet())?"":"⚠️ הלוח המשותף לא זמין, התוצאה נשמרה רק במכשיר הזה";if(DB||useSheet())upload(rec);
   $("who").textContent="שחקן: "+st.name;
   $("fscore").textContent=st.score;$("fok").textContent=st.ok;$("fbad").textContent=st.bad;
   $("fpct").textContent=Math.round(st.ok/15*100)+"%";$("grade").textContent=grade(st.score);
@@ -393,7 +398,7 @@ function lockGame(){locked=true;tries=0;$("adm").classList.remove("open");if(doc
 function norm(s){return s.trim().replace(/\s+/g," ").replace(/ ו(?=אלירן)/," ")}
 function fnv(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(16)}
 function sha(s){if(!(window.crypto&&crypto.subtle))return Promise.resolve(fnv(s));return crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)).then(function(h){return Array.prototype.map.call(new Uint8Array(h),function(x){return("0"+x.toString(16)).slice(-2)}).join("")})}
-function tryCode(){if(locked)return;var c=$("admcode");c.classList.remove("bad");sha(norm(c.value)).then(function(h){if(h===HASH||h===HASH2){tries=0;$("admgate").hidden=true;$("admbody").hidden=false;renderAdmin();$("admclose").focus()}else{tries++;if(tries>=3){lockGame()}else{$("admerr").textContent="קוד שגוי. נותרו "+(3-tries)+" ניסיונות.";c.classList.add("bad");c.select()}}}).catch(function(){$("admerr").textContent="לא ניתן לבדוק את הקוד בדפדפן הזה."})}
+function tryCode(){if(locked)return;var c=$("admcode");c.classList.remove("bad");sha(norm(c.value)).then(function(h){if(h===HASH||h===HASH2){ADMINCODE=c.value.trim();tries=0;$("admgate").hidden=true;$("admbody").hidden=false;renderAdmin();$("admclose").focus()}else{tries++;if(tries>=3){lockGame()}else{$("admerr").textContent="קוד שגוי. נותרו "+(3-tries)+" ניסיונות.";c.classList.add("bad");c.select()}}}).catch(function(){$("admerr").textContent="לא ניתן לבדוק את הקוד בדפדפן הזה."})}
 $("admok").onclick=tryCode;$("admx").onclick=closeAdmin;
 $("admcode").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();tryCode()}});
 $("ttl").addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openAdmin()}});
