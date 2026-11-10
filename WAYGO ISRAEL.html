@@ -1,362 +1,587 @@
-==================== package.json ====================
-
-{"name":"waygo-israel","private":true,"version":"0.1.0","type":"module",
-"scripts":{"dev":"vite","build":"tsc -b && vite build","preview":"vite preview"},
-"dependencies":{"@supabase/supabase-js":"^2.45.0","leaflet":"^1.9.4","react":"^18.3.1","react-dom":"^18.3.1"},
-"devDependencies":{"@tailwindcss/vite":"^4.0.0","@types/leaflet":"^1.9.12","@types/react":"^18.3.3","@types/react-dom":"^18.3.0","@vitejs/plugin-react":"^4.3.1","tailwindcss":"^4.0.0","typescript":"^5.5.0","vite":"^5.4.0"}}
-
-
-==================== vite.config.ts ====================
-
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-export default defineConfig({ plugins: [react(), tailwindcss()] })
-
-
-==================== tsconfig.json ====================
-
-{"compilerOptions":{"target":"ES2020","lib":["ES2020","DOM"],"module":"ESNext","moduleResolution":"bundler","jsx":"react-jsx","strict":true,"skipLibCheck":true,"noEmit":true,"types":["vite/client"]},"include":["src"]}
-
-
-==================== index.html ====================
-
-<!doctype html><html lang="he" dir="rtl"><head><meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<title>WAYGO ISRAEL</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800&display=swap" rel="stylesheet"/>
-</head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>
-
-
-==================== .env.example ====================
-
-# Client-safe values only. NO routing keys here.
-VITE_PROXY_URL=https://<project>.supabase.co/functions/v1/proxy
-VITE_SUPABASE_URL=https://<project>.supabase.co
-VITE_SUPABASE_ANON_KEY=<anon key>
-
-
-==================== supabase/functions/proxy/index.ts ====================
-
-// supabase functions deploy proxy ; supabase secrets set ORS_API_KEY=xxxx
-const KEY = Deno.env.get('ORS_API_KEY')
-const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type, apikey' }
-const PROFILES = ['driving-car','cycling-regular','foot-walking','cycling-mountain','foot-hiking']
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
-  if (!KEY) return Response.json({ error: 'NO_API_KEY' }, { status: 503, headers: cors })
-  const b = await req.json()
-  let url = '', init: RequestInit = {}
-  if (b.op === 'route') {
-    if (!PROFILES.includes(b.profile)) return Response.json({ error: 'BAD_PROFILE' }, { status: 400, headers: cors })
-    url = `https://api.openrouteservice.org/v2/directions/${b.profile}/geojson`
-    init = { method: 'POST', headers: { Authorization: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(b.body) }
-  } else if (b.op === 'geocode') {
-    const q = new URLSearchParams({ api_key: KEY, text: String(b.text).slice(0, 200), 'boundary.country': 'ISR', lang: 'he', size: '6' })
-    url = `https://api.openrouteservice.org/geocode/autocomplete?${q}`
-  } else return Response.json({ error: 'BAD_OP' }, { status: 400, headers: cors })
-  const r = await fetch(url, init)
-  return new Response(await r.text(), { status: r.status, headers: { ...cors, 'Content-Type': 'application/json' } })
-})
-
-
-==================== src/routing/types.ts ====================
-
-export type Mode = 'car' | 'bike' | 'walk' | 'mtb' | 'run'
-export type LL = [number, number]
-export interface Step { text: string; distance: number; duration: number; at: number }
-export interface Route {
-  id: string; label: string; coords: LL[]; distance: number; duration: number
-  ascent?: number; descent?: number; waytypes: string[]; steps: Step[]; pros: string[]; cons: string[]
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b0b10">
+<title>ערוץ מיוחד</title>
+<style>
+:root{--bg:#07080d;--card:#11141d;--line:#282e3b;--text:#f7f8fc;--muted:#9ba4b5;--red:#e50920;--accent:#ff4258}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(900px 480px at 50% -180px,rgba(229,9,32,.22),transparent 72%),linear-gradient(180deg,#090b12 0%,#07080d 70%);color:var(--text);font-family:Arial,"Noto Sans Hebrew",sans-serif;min-height:100vh}
+header{height:3px;background:linear-gradient(90deg,#8f0615,#f21b35,#ff6878);box-shadow:0 0 22px rgba(229,9,32,.5)}
+main{max-width:1360px;margin:auto;padding:clamp(28px,5vw,68px) clamp(16px,3.5vw,42px) 80px}
+.brand{display:inline-flex;align-items:center;gap:9px;color:#ff6677;letter-spacing:3.5px;font-size:10px;font-weight:900;padding:9px 14px;border:1px solid rgba(255,75,95,.3);background:rgba(229,9,32,.075);border-radius:30px;margin-bottom:24px}
+.brand:before{content:"";width:7px;height:7px;border-radius:50%;background:#ff3348;box-shadow:0 0 12px #ff3348}
+h1{font-size:clamp(38px,5.6vw,64px);line-height:1.05;letter-spacing:-2px;margin:0 0 12px}
+.sub{max-width:560px;font-size:16px;line-height:1.8;color:#a6adbd;margin:0}
+.topline{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:0 0 30px;border-bottom:1px solid #ffffff12}
+.head-actions{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.add,.viewmode{min-height:50px;padding:0 22px;border-radius:13px;font-size:14px;font-weight:800;letter-spacing:.1px;cursor:pointer}
+.add{background:linear-gradient(135deg,#ff3049 0%,#c90020 100%);border:1px solid #ff5265;box-shadow:0 8px 28px #e5092038,inset 0 1px #ffffff30;color:white}
+.add:hover{filter:brightness(1.12);transform:translateY(-2px)}
+.viewmode{background:linear-gradient(180deg,#202532,#151923);border:1px solid #3a4354;color:#f0f2f7;box-shadow:inset 0 1px #ffffff0d}
+.viewmode:hover{border-color:#69758b;background:#252c3b}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:22px;margin-top:28px}
+.card{position:relative;min-width:0;background:#11141d;border:1px solid #282f3d;border-radius:17px;overflow:hidden;box-shadow:0 8px 26px #0005;isolation:isolate;transition:transform .2s,border-color .2s,box-shadow .2s}
+.card:hover{border-color:#535d70;box-shadow:0 18px 42px #0008}
+.media{position:relative;aspect-ratio:16/9;background:#05060a;overflow:hidden;touch-action:pan-y}
+.media:after{content:"";position:absolute;inset:0;pointer-events:none;border:1px solid #ffffff0b;border-radius:inherit}
+.media video,.media iframe{width:100%;height:100%;display:block;object-fit:contain;background:#08080c;border:0}
+.overlay{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .16s}
+.card.controls-visible .overlay{opacity:1}
+.more{position:absolute;top:12px;right:12px;width:43px;height:43px;border:1px solid #ffffff40;border-radius:50%;background:rgba(9,11,17,.82);color:white;font-size:25px;cursor:pointer;pointer-events:auto;box-shadow:0 5px 18px #0006;backdrop-filter:blur(14px)}
+.sound{position:absolute;left:13px;bottom:13px;border:1px solid #ffffff40;background:rgba(9,11,17,.82);color:white;border-radius:25px;padding:10px 14px;font-size:15px;cursor:pointer;pointer-events:auto;box-shadow:0 5px 18px #0006;backdrop-filter:blur(14px)}
+.more:hover,.sound:hover{background:rgba(229,9,32,.9);border-color:#ff8794}
+.menu{display:none;position:absolute;top:59px;right:12px;min-width:145px;background:#171b25;border:1px solid #3b4352;border-radius:12px;padding:5px;box-shadow:0 8px 25px #0009;pointer-events:auto;z-index:4;backdrop-filter:blur(16px)}
+.menu.open{display:block}
+.menu button{display:block;width:100%;text-align:right;background:transparent;border:0;color:white;padding:11px;border-radius:8px;font-size:14px;cursor:pointer}
+.menu button:hover{background:#2b3241}
+.live-badge{position:absolute;top:12px;left:12px;z-index:3;background:#e50920;color:white;border-radius:8px;padding:7px 10px;font-size:11px;font-weight:900;letter-spacing:.5px;box-shadow:0 4px 16px #0008}
+.live-card .media iframe{position:absolute;inset:0}
+.live-card .media{isolation:isolate}
+.empty{grid-column:1/-1;border:1px dashed #465064;background:linear-gradient(145deg,#121722,#0d1017);border-radius:18px;text-align:center;padding:62px 20px;color:var(--muted);line-height:1.7;box-shadow:inset 0 1px #ffffff08}
+.empty strong{display:block;color:white;font-size:24px;margin-bottom:8px;letter-spacing:-.5px}
+.modal{display:none;position:fixed;inset:0;background:#000d;z-index:1000;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(9px)}
+.modal.show{display:flex}
+.dialog{width:min(540px,100%);background:linear-gradient(145deg,#1d2330,#11151e);border:1px solid #3a4353;border-radius:20px;padding:28px;max-height:90dvh;overflow:auto;position:relative;z-index:1001;box-shadow:0 30px 100px #000c}
+.dialog h2{margin:0 0 18px;font-size:25px}
+.close{float:left;background:none;border:0;color:white;font-size:27px;cursor:pointer}
+label{display:block;margin:15px 0;color:#dfe3ec;font-size:14px;font-weight:700}
+input,textarea{display:block;width:100%;margin-top:8px;background:#0b0e15;color:white;border:1px solid #343d4e;border-radius:12px;padding:14px;font:inherit;font-size:16px;outline:none;pointer-events:auto;user-select:text;-webkit-user-select:text;transition:border-color .18s,box-shadow .18s}
+input:focus,textarea:focus{border-color:#ff4057;box-shadow:0 0 0 3px #e5092022}
+textarea{resize:vertical;min-height:75px}
+.save{width:100%;margin-top:14px;background:linear-gradient(135deg,#ff3049,#c90020);border:1px solid #ff5265;color:white;padding:15px;border-radius:13px;font-weight:800;font-size:16px;cursor:pointer;box-shadow:0 8px 24px #e5092030}
+.save:hover{filter:brightness(1.12)}
+.help{font-size:12px;color:var(--muted);line-height:1.6}
+.fit-mode{position:fixed;inset:0;z-index:50;background:#05060a;overflow:hidden;padding:7px;height:100dvh;box-sizing:border-box}
+.fit-mode main{width:100%;max-width:none;height:100%;min-height:0;box-sizing:border-box;padding:7px 10px 10px;display:flex;flex-direction:column;overflow:hidden}
+.fit-mode .brand,.fit-mode .sub{display:none}
+.fit-mode .topline{flex:0 0 auto;margin:0;min-height:38px;gap:8px;padding:0;border:0}
+.fit-mode h1{font-size:clamp(16px,2.2vw,25px);margin:0}
+.fit-mode .head-actions{gap:6px}
+.fit-mode .head-actions button{min-width:0;padding:8px 13px;font-size:clamp(11px,1.4vw,15px)}
+.fit-mode .grid{flex:1 1 auto;min-height:0;width:100%;margin-top:8px;gap:8px;overflow:hidden;grid-template-columns:repeat(1,minmax(0,1fr));grid-template-rows:minmax(0,1fr);align-content:stretch}
+.fit-mode .card{min-width:0;min-height:0;height:100%;border-radius:12px}
+.fit-mode .media{height:100%;width:100%;aspect-ratio:auto}
+.fit-mode .media video,.fit-mode .media iframe{object-fit:contain}
+.fit-mode .empty{align-self:center}
+@media(max-width:700px){
+ main{padding:34px 16px 48px}
+ .topline{align-items:stretch;padding-bottom:20px}
+ .head-actions{display:grid;grid-template-columns:1fr 1fr;margin-top:18px}
+ .head-actions button{width:100%;padding:0 10px}
+ .grid{grid-template-columns:1fr;gap:16px;margin-top:22px}
+ .dialog{padding:22px}
+ .more{width:37px;height:37px}
+ .sound{font-size:12px;padding:8px 11px}
+ .fit-mode{padding:5px}
+ .fit-mode main{padding:6px}
+ .fit-mode .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
 }
-export interface Place { label: string; pos: LL }
-export interface RoutingProvider {
-  supports(mode: Mode): boolean
-  route(mode: Mode, points: LL[]): Promise<Route[]>
-  geocode(text: string): Promise<Place[]>
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
-export class ConfigError extends Error {}
-
-
-==================== src/routing/ors.ts ====================
-
-import { ConfigError, LL, Mode, Place, Route, RoutingProvider } from './types'
-const URL_ = import.meta.env.VITE_PROXY_URL as string | undefined
-const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
-// Every mode maps to a different ORS profile, so routes differ per mode.
-const PROFILE: Record<Mode, string> = { car: 'driving-car', bike: 'cycling-regular', walk: 'foot-walking', mtb: 'cycling-mountain', run: 'foot-hiking' }
-const WAYTYPE = ['לא ידוע','כביש מהיר','דרך ראשית','דרך משנית','דרך מקומית','רחוב','שביל','דרך עפר','שביל אופניים','מדרכה','שביל הליכה','מעבר','מדרגות','מעבר חצייה','מעבר רגלי']
-async function call(body: unknown) {
-  if (!URL_) throw new ConfigError('חסרה כתובת ה-Proxy (VITE_PROXY_URL). ראה README.')
-  const r = await fetch(URL_, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(ANON ? { Authorization: `Bearer ${ANON}`, apikey: ANON } : {}) }, body: JSON.stringify(body) })
-  const j = await r.json().catch(() => ({}))
-  if (j.error === 'NO_API_KEY') throw new ConfigError('חסר מפתח OpenRouteService בשרת. הרץ: supabase secrets set ORS_API_KEY=...')
-  if (!r.ok) throw new Error(j?.error?.message ?? 'שגיאת ניתוב')
-  return j
-}
-function parse(f: any, id: string, label: string, pros: string[], cons: string[]): Route {
-  const p = f.properties, c: LL[] = f.geometry.coordinates.map((x: number[]) => [x[1], x[0]])
-  const steps = (p.segments ?? []).flatMap((s: any) => s.steps.map((t: any) => ({ text: t.instruction, distance: t.distance, duration: t.duration, at: t.way_points[0] })))
-  const wt = p.extras?.waytypes?.summary?.map((s: any) => WAYTYPE[s.value] ?? '') ?? []
-  return { id, label, coords: c, distance: p.summary.distance, duration: p.summary.duration, ascent: p.ascent, descent: p.descent, waytypes: [...new Set<string>(wt.filter(Boolean))], steps, pros, cons }
-}
-export const ors: RoutingProvider = {
-  supports: () => true,
-  async route(mode: Mode, pts: LL[]) {
-    const profile = PROFILE[mode]
-    const base = { coordinates: pts.map(([a, b]) => [b, a]), language: 'he', instructions: true, elevation: true, extra_info: ['waytype'] }
-    const run = (extra: object) => call({ op: 'route', profile, body: { ...base, ...extra } }).then(j => j.features as any[])
-    const [fast, short, alt] = await Promise.allSettled([
-      run({ preference: 'fastest' }),
-      run({ preference: 'shortest' }),
-      pts.length === 2 ? run({ preference: 'recommended', alternative_routes: { target_count: 2, share_factor: 0.6, weight_factor: 1.6 } }) : Promise.reject(),
-    ])
-    const out: Route[] = []
-    for (const x of [fast, short]) if (x.status === 'rejected' && x.reason instanceof ConfigError) throw x.reason
-    if (fast.status === 'fulfilled') out.push(parse(fast.value[0], 'fast', 'המהיר ביותר', ['זמן הגעה קצר'], ['ייתכן מרחק ארוך יותר']))
-    if (short.status === 'fulfilled') out.push(parse(short.value[0], 'short', 'הקצר ביותר', ['מרחק קצר'], ['ייתכן שייקח יותר זמן']))
-    if (alt.status === 'fulfilled' && alt.value.length > 1) out.push(parse(alt.value[1], 'alt', 'מסלול חלופי', ['מסלול שונה מהאחרים'], ['לרוב ארוך או איטי יותר']))
-    if (!out.length) throw new Error('לא נמצא מסלול מתאים לאמצעי התחבורה שנבחר.')
-    return out
-  },
-  async geocode(text: string): Promise<Place[]> {
-    const j = await call({ op: 'geocode', text })
-    return (j.features ?? []).map((f: any) => ({ label: f.properties.label, pos: [f.geometry.coordinates[1], f.geometry.coordinates[0]] as LL }))
-  },
-}
-// To swap provider (GraphHopper/OSRM): implement RoutingProvider and change this export.
-export const provider: RoutingProvider = ors
-
-
-==================== src/lib/store.ts ====================
-
-import { createClient } from '@supabase/supabase-js'
-import { LL, Mode } from '../routing/types'
-export interface Saved { id: string; name: string; description: string; mode: Mode; points: LL[]; distance: number; is_public: boolean; difficulty: 'קל' | 'בינוני' | 'קשה' }
-const sb = import.meta.env.VITE_SUPABASE_URL ? createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY) : null
-const K = 'waygo.routes', F = 'waygo.favs'
-const rd = <T,>(k: string, d: T): T => { try { return JSON.parse(localStorage.getItem(k) ?? '') } catch { return d } }
-export const store = {
-  online: !!sb,
-  mine: (): Saved[] => rd(K, []),
-  save(r: Saved) {
-    localStorage.setItem(K, JSON.stringify([r, ...rd<Saved[]>(K, []).filter(x => x.id !== r.id)]))
-    if (sb && r.is_public) sb.from('routes').upsert(r).then(() => {})
-  },
-  remove(id: string) { localStorage.setItem(K, JSON.stringify(rd<Saved[]>(K, []).filter(x => x.id !== id))) },
-  async publicRoutes(): Promise<Saved[]> { if (!sb) return []; const { data } = await sb.from('routes').select('*').eq('is_public', true).limit(100); return (data as Saved[]) ?? [] },
-  favs: (): string[] => rd(F, []),
-  toggleFav(id: string) { const f = rd<string[]>(F, []); localStorage.setItem(F, JSON.stringify(f.includes(id) ? f.filter(x => x !== id) : [...f, id])) },
-}
-
-
-==================== src/lib/geo.ts ====================
-
-import { LL } from '../routing/types'
-export const dist = (a: LL, b: LL) => { const R = 6371000, r = Math.PI / 180, dLat = (b[0]-a[0])*r, dLng = (b[1]-a[1])*r
-  const h = Math.sin(dLat/2)**2 + Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dLng/2)**2; return 2*R*Math.asin(Math.sqrt(h)) }
-export const nearest = (c: LL[], p: LL) => { let bi = 0, bd = Infinity; c.forEach((x, i) => { const d = dist(x, p); if (d < bd) { bd = d; bi = i } }); return { index: bi, off: bd } }
-export const remaining = (c: LL[], from: number) => { let s = 0; for (let i = from; i < c.length - 1; i++) s += dist(c[i], c[i+1]); return s }
-export const km = (m: number) => (m/1000).toFixed(m < 10000 ? 1 : 0) + ' ק״מ'
-export const mins = (s: number) => s >= 3600 ? `${Math.floor(s/3600)} ש׳ ${Math.round(s%3600/60)} ד׳` : `${Math.max(1, Math.round(s/60))} ד׳`
-
-
-==================== src/main.tsx ====================
-
-import { createRoot } from 'react-dom/client'
-import 'leaflet/dist/leaflet.css'
-import './index.css'
-import App from './App'
-createRoot(document.getElementById('root')!).render(<App />)
-
-
-==================== src/index.css ====================
-
-@import "tailwindcss";
-:root{--bg:#f3f6f8;--panel:#fffffff0;--ink:#0d2a3a;--sub:#5b7283;--accent:#0a7ea4;--hot:#f2a312}
-.dark{--bg:#0b1820;--panel:#12252ff0;--ink:#e6f1f6;--sub:#8fa8b6;--accent:#37b6dd;--hot:#f7b84a}
-html,body,#root{height:100%;margin:0;font-family:Heebo,system-ui,sans-serif;background:var(--bg);color:var(--ink)}
-.panel{background:var(--panel);backdrop-filter:blur(10px);border-radius:18px;box-shadow:0 6px 28px #0003}
-.btn{background:var(--accent);color:#fff;border-radius:12px;padding:.6rem 1rem;font-weight:600;transition:transform .15s}
-.btn:active{transform:scale(.97)}.btn2{border:1px solid var(--sub);border-radius:12px;padding:.5rem .8rem}
-.inp{width:100%;background:transparent;border:1px solid var(--sub);border-radius:12px;padding:.6rem .8rem;color:var(--ink)}
-.dark .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9)}
-
-
-==================== src/App.tsx ====================
-
-import { useEffect, useRef, useState } from 'react'
-import L from 'leaflet'
-import { provider } from './routing/ors'
-import { ConfigError, LL, Mode, Place, Route } from './routing/types'
-import { store, Saved } from './lib/store'
-import { km, mins, nearest, remaining } from './lib/geo'
-
-const MODES: { id: Mode; icon: string; name: string }[] = [
-  { id: 'car', icon: '🚗', name: 'רכב' }, { id: 'bike', icon: '🚴', name: 'אופניים' }, { id: 'walk', icon: '🚶', name: 'הליכה' },
-  { id: 'mtb', icon: '🚵', name: 'אופני שטח' }, { id: 'run', icon: '🏃', name: 'ריצה' }]
-const TABS = ['מפה', 'חיפוש מסלול', 'המסלולים שלי', 'מסלולים ציבוריים', 'מועדפים', 'הגדרות'] as const
-type Tab = typeof TABS[number]
-const COLORS = ['#0a7ea4', '#f2a312', '#7a5af8']
-const ISRAEL: LL = [31.5, 34.9]
-
-function PlaceInput({ label, value, onPick }: { label: string; value: string; onPick: (p: Place) => void }) {
-  const [q, setQ] = useState(value), [opts, setOpts] = useState<Place[]>([]), t = useRef<number>()
-  useEffect(() => setQ(value), [value])
-  const change = (v: string) => { setQ(v); clearTimeout(t.current)
-    if (v.length < 3) return setOpts([])
-    t.current = window.setTimeout(() => provider.geocode(v).then(setOpts).catch(() => setOpts([])), 300) }
-  return <div className="relative"><input className="inp" placeholder={label} value={q} onChange={e => change(e.target.value)} />
-    {opts.length > 0 && <ul className="panel absolute z-[1200] mt-1 w-full max-h-52 overflow-auto p-1">
-      {opts.map((o, i) => <li key={i}><button className="w-full text-start p-2 rounded hover:bg-black/5" onClick={() => { onPick(o); setQ(o.label); setOpts([]) }}>{o.label}</button></li>)}</ul>}</div>
-}
-
-export default function App() {
-  const [tab, setTab] = useState<Tab>('מפה'), [dark, setDark] = useState(matchMedia('(prefers-color-scheme: dark)').matches)
-  const [mode, setMode] = useState<Mode>('car'), [from, setFrom] = useState<Place | null>(null), [to, setTo] = useState<Place | null>(null)
-  const [routes, setRoutes] = useState<Route[]>([]), [sel, setSel] = useState(0), [busy, setBusy] = useState(false), [err, setErr] = useState('')
-  const [me, setMe] = useState<LL | null>(null), [heading, setHeading] = useState(0)
-  const [nav, setNav] = useState(false), [navIdx, setNavIdx] = useState(0), [off, setOff] = useState(false)
-  const [mine, setMine] = useState(store.mine()), [pub, setPub] = useState<Saved[]>([]), [favs, setFavs] = useState(store.favs())
-  const [flt, setFlt] = useState({ mode: '', diff: '', max: 100 })
-  const [edit, setEdit] = useState(false), [wps, setWps] = useState<LL[]>([])
-  const mapEl = useRef<HTMLDivElement>(null), map = useRef<L.Map>(), lines = useRef<L.LayerGroup>(), meMk = useRef<L.Marker>(), wpLayer = useRef<L.LayerGroup>()
-  const editRef = useRef(edit); editRef.current = edit
-  const route = routes[sel]
-
-  useEffect(() => { document.documentElement.classList.toggle('dark', dark) }, [dark])
-  useEffect(() => { // map init
-    const m = L.map(mapEl.current!, { zoomControl: false }).setView(ISRAEL, 8)
-    const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m)
-    const cyc = L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', { maxZoom: 20, attribution: '© CyclOSM' })
-    const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenTopoMap' })
-    L.control.layers({ 'רגילה': osm, 'אופניים': cyc, 'טופוגרפית': topo }, {}, { position: 'topleft' }).addTo(m)
-    L.control.zoom({ position: 'bottomleft' }).addTo(m)
-    lines.current = L.layerGroup().addTo(m); wpLayer.current = L.layerGroup().addTo(m); map.current = m
-    m.on('click', e => { if (editRef.current) setWps(w => [...w, [e.latlng.lat, e.latlng.lng]]) })
-    return () => { m.remove() }
-  }, [])
-  useEffect(() => { setTimeout(() => map.current?.invalidateSize(), 50) }, [tab, nav])
-  useEffect(() => { // GPS (only after user action)
-    if (!navigator.geolocation || (!nav && !me)) return
-    const id = navigator.geolocation.watchPosition(p => { setMe([p.coords.latitude, p.coords.longitude]); if (p.coords.heading != null && !isNaN(p.coords.heading)) setHeading(p.coords.heading) }, () => setErr('אין גישה למיקום. אשר הרשאת מיקום בדפדפן.'), { enableHighAccuracy: true })
-    return () => navigator.geolocation.clearWatch(id)
-  }, [nav, !!me])
-  useEffect(() => { // user marker with heading
-    if (!me || !map.current) return
-    const icon = L.divIcon({ className: '', iconSize: [28, 28], html: `<div style="transform:rotate(${heading}deg);font-size:24px;line-height:28px;text-align:center">🧭</div>` })
-    if (!meMk.current) meMk.current = L.marker(me, { icon }).addTo(map.current); else { meMk.current.setLatLng(me); meMk.current.setIcon(icon) }
-    if (nav) map.current.setView(me, Math.max(map.current.getZoom(), 16))
-    if (nav && route) { const n = nearest(route.coords, me); setNavIdx(n.index); setOff(n.off > 60) }
-  }, [me, heading])
-  useEffect(() => { // draw routes
-    lines.current?.clearLayers(); if (!routes.length) return
-    routes.forEach((r, i) => { if (nav && i !== sel) return
-      const pl = L.polyline(r.coords, { color: COLORS[i], weight: i === sel ? 7 : 4, opacity: i === sel ? 0.95 : 0.5 }).on('click', () => setSel(i)).addTo(lines.current!)
-      if (i === sel && !nav) map.current?.fitBounds(pl.getBounds(), { padding: [60, 60] }) })
-  }, [routes, sel, nav])
-  useEffect(() => { // waypoint editor markers (draggable)
-    wpLayer.current?.clearLayers()
-    wps.forEach((p, i) => L.marker(p, { draggable: true }).bindTooltip(i === 0 ? 'התחלה' : i === wps.length - 1 ? 'סיום' : `נקודה ${i}`)
-      .on('dragend', e => setWps(w => w.map((x, j) => j === i ? [e.target.getLatLng().lat, e.target.getLatLng().lng] as LL : x)))
-      .on('contextmenu', () => setWps(w => w.filter((_, j) => j !== i))).addTo(wpLayer.current!))
-  }, [wps])
-
-  async function find(points?: LL[]) {
-    const pts = points ?? (from && to ? [from.pos, to.pos] : null)
-    if (!pts || pts.length < 2) return setErr('בחר נקודת התחלה ויעד מתוך ההצעות.')
-    if (!provider.supports(mode)) return setErr('אמצעי התחבורה אינו נתמך אצל ספק הניתוב.')
-    setBusy(true); setErr('')
-    try { const r = await provider.route(mode, pts); setRoutes(r); setSel(0); setTab('חיפוש מסלול') }
-    catch (e) { setRoutes([]); setErr(e instanceof ConfigError ? '⚙️ ' + e.message : (e as Error).message) }
-    setBusy(false)
-  }
-  const save = () => { if (!route) return; const pts = wps.length > 1 ? wps : (from && to ? [from.pos, to.pos] : []); if (pts.length < 2) return
-    const name = prompt('שם המסלול?', `${from?.label ?? 'מסלול'} → ${to?.label ?? ''}`); if (!name) return
-    const description = prompt('תיאור (לא חובה)') ?? ''; const is_public = store.online && confirm('לפרסם את המסלול לציבור?')
-    const diff: Saved['difficulty'] = (route.ascent ?? 0) > 600 ? 'קשה' : (route.ascent ?? 0) > 200 ? 'בינוני' : 'קל'
-    store.save({ id: crypto.randomUUID(), name, description, mode, points: pts, distance: route.distance, is_public, difficulty: diff }); setMine(store.mine()) }
-  const open = (s: Saved) => { setMode(s.mode); setWps(s.points); setFrom(null); setTo(null); find(s.points) }
-  const fav = (id: string) => { store.toggleFav(id); setFavs(store.favs()) }
-  const startPicker = () => { setEdit(true); setWps([]); setTab('מפה') }
-
-  const step = route?.steps.filter(s => s.at >= navIdx)[0]
-  const left = route ? remaining(route.coords, navIdx) : 0
-  const eta = route ? new Date(Date.now() + route.duration * (left / Math.max(route.distance, 1)) * 1000).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : ''
-  const card = (s: Saved) => <div key={s.id} className="p-3 border-b border-black/10 flex gap-2 items-center">
-    <button className="flex-1 text-start" onClick={() => open(s)}><b>{s.name}</b><div className="text-sm" style={{ color: 'var(--sub)' }}>{MODES.find(m => m.id === s.mode)?.icon} {km(s.distance)} · {s.difficulty}</div></button>
-    <button onClick={() => fav(s.id)} aria-label="מועדף">{favs.includes(s.id) ? '⭐' : '☆'}</button>
-    {mine.some(x => x.id === s.id) && <button onClick={() => { store.remove(s.id); setMine(store.mine()) }} aria-label="מחק">🗑️</button>}</div>
-
-  return <div className="h-full w-full relative overflow-hidden">
-    <div ref={mapEl} className="absolute inset-0" />
-    {nav && route ? <>
-      <div className="panel absolute top-3 inset-x-3 z-[1000] p-4 md:max-w-md md:mx-auto">
-        <div className="text-2xl font-extrabold">{step?.text ?? 'הגעת ליעד'}</div>
-        <div style={{ color: 'var(--sub)' }}>בעוד {km(step ? Math.max(step.distance, 0) : 0)} · נשארו {km(left)} · הגעה {eta}</div>
-        <div className="h-2 rounded bg-black/10 mt-2"><div className="h-2 rounded" style={{ background: 'var(--hot)', width: `${100 - left / route.distance * 100}%` }} /></div>
-        {off && <div className="mt-2 flex gap-2 items-center">סטית מהמסלול <button className="btn" onClick={() => me && find([me, ...(wps.length ? wps.slice(1) : to ? [to.pos] : [])])}>חשב מחדש</button></div>}</div>
-      <div className="absolute bottom-6 inset-x-3 z-[1000] flex gap-2 justify-center">
-        <button className="btn" style={{ background: '#d92d20' }} onClick={() => setNav(false)}>עצור ניווט</button>
-        <button className="btn2 panel" onClick={() => me && map.current?.setView(me, 17)}>חזור למסלול</button></div>
-    </> : <>
-      <nav className="panel absolute top-3 inset-x-3 z-[1000] p-1 flex gap-1 overflow-x-auto md:max-w-3xl md:mx-auto">
-        <b className="px-3 self-center whitespace-nowrap" style={{ color: 'var(--accent)' }}>WAYGO ISRAEL</b>
-        {TABS.map(t => <button key={t} onClick={() => { setTab(t); if (t === 'מסלולים ציבוריים') store.publicRoutes().then(setPub) }}
-          className="px-3 py-2 rounded-xl whitespace-nowrap" style={tab === t ? { background: 'var(--accent)', color: '#fff' } : {}}>{t}</button>)}</nav>
-      {tab === 'מפה' && <div className="absolute bottom-6 inset-x-3 z-[1000] flex gap-2 justify-center">
-        <button className="btn" onClick={() => { setMe(me ?? ISRAEL); navigator.geolocation?.getCurrentPosition(p => { const c: LL = [p.coords.latitude, p.coords.longitude]; setMe(c); map.current?.setView(c, 15) }, () => setErr('אין גישה למיקום')) }}>📍 המיקום שלי</button>
-        {!edit ? <button className="btn2 panel" onClick={startPicker}>✏️ צור מסלול על המפה</button>
-          : <><button className="btn" onClick={() => { setEdit(false); find(wps) }}>חשב מסלול ({wps.length} נק׳)</button><button className="btn2 panel" onClick={() => { setEdit(false); setWps([]) }}>בטל</button></>}</div>}
-      {edit && <div className="panel absolute top-20 inset-x-3 z-[1000] p-2 text-center md:max-w-md md:mx-auto">לחץ על המפה להוספת נקודות · גרור להזזה · לחיצה ימנית למחיקה</div>}
-      {tab !== 'מפה' && <aside className="panel absolute z-[1000] top-20 bottom-3 inset-x-3 md:inset-x-auto md:right-3 md:w-[400px] overflow-auto p-4">
-        {tab === 'חיפוש מסלול' && <div className="space-y-3">
-          <div className="grid grid-cols-5 gap-1">{MODES.map(m => <button key={m.id} onClick={() => setMode(m.id)} className="rounded-xl p-2 text-sm" style={mode === m.id ? { background: 'var(--accent)', color: '#fff' } : { border: '1px solid var(--sub)' }}><div className="text-xl">{m.icon}</div>{m.name}</button>)}</div>
-          <PlaceInput label="מאיפה יוצאים?" value={from?.label ?? ''} onPick={setFrom} />
-          <PlaceInput label="לאן רוצים להגיע?" value={to?.label ?? ''} onPick={setTo} />
-          <button className="btn w-full" disabled={busy} onClick={() => find()}>{busy ? 'מחשב…' : 'מצא מסלול'}</button>
-          {err && <div className="p-3 rounded-xl bg-red-500/15" role="alert">{err}</div>}
-          {routes.map((r, i) => <div key={r.id} onClick={() => setSel(i)} className="p-3 rounded-xl cursor-pointer" style={{ border: `2px solid ${i === sel ? COLORS[i] : 'transparent'}`, background: 'color-mix(in srgb,var(--sub) 10%,transparent)' }}>
-            <div className="flex justify-between"><b style={{ color: COLORS[i] }}>מסלול {i + 1} – {r.label}</b><span>{mins(r.duration)} · {km(r.distance)}</span></div>
-            <div className="text-sm" style={{ color: 'var(--sub)' }}>{r.waytypes.join(', ')}{r.ascent != null && ` · עלייה ${Math.round(r.ascent)} מ׳ / ירידה ${Math.round(r.descent ?? 0)} מ׳`}</div>
-            <div className="text-sm">👍 {r.pros.join(', ')} · 👎 {r.cons.join(', ')}</div>
-            {i === sel && <><ol className="list-decimal ps-5 mt-2 text-sm max-h-40 overflow-auto">{r.steps.map((s, j) => <li key={j}>{s.text} ({km(s.distance)})</li>)}</ol>
-              <div className="flex gap-2 mt-2"><button className="btn flex-1" onClick={() => { setNav(true) }}>התחל ניווט</button><button className="btn2" onClick={save}>שמור</button></div></>}</div>)}</div>}
-        {tab === 'המסלולים שלי' && <div>{mine.length ? mine.map(card) : <p>עדיין אין מסלולים שמורים. חשב מסלול ולחץ ״שמור״, או צור מסלול על המפה.</p>}</div>}
-        {tab === 'מסלולים ציבוריים' && <div className="space-y-2">
-          <div className="flex gap-2"><select className="inp" onChange={e => setFlt({ ...flt, mode: e.target.value })}><option value="">כל התחבורה</option>{MODES.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
-            <select className="inp" onChange={e => setFlt({ ...flt, diff: e.target.value })}><option value="">כל הרמות</option><option>קל</option><option>בינוני</option><option>קשה</option></select></div>
-          <label className="block text-sm">עד {flt.max} ק״מ<input type="range" min={1} max={200} value={flt.max} className="w-full" onChange={e => setFlt({ ...flt, max: +e.target.value })} /></label>
-          {!store.online ? <p>מסלולים ציבוריים דורשים חיבור ל-Supabase (ראה README).</p> :
-            pub.filter(r => (!flt.mode || r.mode === flt.mode) && (!flt.diff || r.difficulty === flt.diff) && r.distance / 1000 <= flt.max).map(card)}</div>}
-        {tab === 'מועדפים' && <div>{[...mine, ...pub].filter(r => favs.includes(r.id)).map(card)}{!favs.length && <p>סמן ⭐ ליד מסלול כדי לשמור אותו כאן.</p>}</div>}
-        {tab === 'הגדרות' && <div className="space-y-3"><label className="flex justify-between">מצב לילה<input type="checkbox" checked={dark} onChange={e => setDark(e.target.checked)} /></label>
-          <p style={{ color: 'var(--sub)' }}>מצב אורח: המסלולים נשמרים במכשיר. {store.online ? 'Supabase מחובר.' : 'Supabase לא מוגדר.'}</p></div>}
-      </aside>}
-    </>}
+button:focus-visible{outline:2px solid #ff6878;outline-offset:3px}
+</style>
+</head>
+<body>
+<header></header>
+<main>
+ <div class="brand">VIDEO CHANNEL</div>
+ <div class="topline">
+  <div>
+   <h1>הסרטונים שלי</h1>
+   <p class="sub">כל הסרטונים והשידורים החיים שלך במקום אחד, עם חוויית צפייה נוחה.</p>
   </div>
+  <div class="head-actions">
+   <button class="viewmode" id="fitBtn" type="button">⛶ הצג את כל הסרטונים</button>
+   <button class="viewmode" id="liveBtn" type="button">🔴 הוסף שידור חי</button>
+   <button class="add" id="addBtn" type="button">＋ הוסף סרטון</button>
+  </div>
+ </div>
+ <section class="grid" id="grid"></section>
+</main>
+
+<div class="modal" id="modal" aria-hidden="true">
+ <div class="dialog">
+  <button class="close" id="close" type="button">×</button>
+  <h2 id="modalTitle">הוסף סרטון</h2>
+  <form id="form">
+   <label>שם הסרטון *
+    <input id="name" type="text" maxlength="90" required placeholder="כתוב שם לסרטון" autocomplete="off">
+   </label>
+   <label>תיאור הסרטון
+    <textarea id="desc" maxlength="220" placeholder="אפשר להוסיף תיאור קצר"></textarea>
+   </label>
+   <label>בחירת סרטון מהמכשיר *
+    <input id="file" type="file" accept="video/*">
+   </label>
+   <p class="help" id="fileHelp">הסרטון יופיע בעמוד ויתנגן ללא קול. בלחיצה ארוכה על הסרטון יופיעו כפתורי האפשרויות והקול.</p>
+   <button class="save" type="submit">שמירת סרטון</button>
+  </form>
+ </div>
+</div>
+
+<div class="modal" id="liveModal" aria-hidden="true">
+ <div class="dialog">
+  <button class="close" id="liveClose" type="button">×</button>
+  <h2>הוסף שידור חי</h2>
+  <form id="liveForm">
+   <label>שם השידור *
+    <input id="liveName" type="text" maxlength="90" required placeholder="לדוגמה: חדשות בשידור חי" autocomplete="off">
+   </label>
+   <label>קישור לשידור *
+    <input id="liveUrl" type="url" required placeholder="הדבק קישור YouTube או קישור הטמעה רשמי" dir="ltr">
+   </label>
+   <p class="help">אפשר להדביק קישור YouTube רגיל, קישור YouTube Live או קישור הטמעה רשמי של ערוץ חדשות. השידור יפעל רק אם בעל הערוץ מאפשר צפייה באתר חיצוני.</p>
+   <button class="save" type="submit">הוסף לערוץ</button>
+  </form>
+ </div>
+</div>
+
+<script>
+'use strict';
+
+const DB='special-channel-stable-v3';
+const TABLE='videos';
+
+let db,items=[],editing=null,urls=new Map();
+
+const $=id=>document.getElementById(id);
+
+function req(r){
+ return new Promise((resolve,reject)=>{
+  r.onsuccess=()=>resolve(r.result);
+  r.onerror=()=>reject(r.error);
+ });
 }
 
+function openDB(){
+ return new Promise((resolve,reject)=>{
+  const r=indexedDB.open(DB,1);
+  r.onupgradeneeded=()=>{
+   if(!r.result.objectStoreNames.contains(TABLE)){
+    r.result.createObjectStore(TABLE,{keyPath:'id'});
+   }
+  };
+  r.onsuccess=()=>resolve(r.result);
+  r.onerror=()=>reject(r.error);
+ });
+}
 
-==================== README.md ====================
+async function load(){
+ items=await req(db.transaction(TABLE).objectStore(TABLE).getAll());
+ items.sort((a,b)=>b.date-a.date);
+ render();
+}
 
-# WAYGO ISRAEL
-React + TS + Vite + Tailwind 4 + Leaflet/OSM. Routing via OpenRouteService behind a Supabase Edge Function (no keys in the client).
+async function put(v){
+ return req(db.transaction(TABLE,'readwrite').objectStore(TABLE).put(v));
+}
 
-## Run
-1. `npm i`
-2. Get a free key at openrouteservice.org. `supabase functions deploy proxy --no-verify-jwt` then `supabase secrets set ORS_API_KEY=...`
-3. `cp .env.example .env` and fill in values, then `npm run dev`
+function videoURL(v){
+ if(!urls.has(v.id)){
+  urls.set(v.id,URL.createObjectURL(v.file));
+ }
+ return urls.get(v.id);
+}
 
-## Supabase table
-```sql
-create table routes(id uuid primary key, name text, description text, mode text, points jsonb, distance real,
-  is_public boolean default false, difficulty text, user_id uuid default auth.uid(), created_at timestamptz default now());
-alter table routes enable row level security;
-create policy "read public" on routes for select using (is_public);
-create policy "write own" on routes for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-```
-## Not built yet
-Supabase login (guest mode works), hazard reports + verification, POI/water-source overlays, Hebrew-labelled tiles.
-Swap routing provider: implement `RoutingProvider` in `src/routing/` (GraphHopper/OSRM).
+function render(){
+ const grid=$('grid');
+ grid.replaceChildren();
+
+ if(!items.length){
+  const e=document.createElement('div');
+  e.className='empty';
+  const b=document.createElement('strong');
+  b.textContent='עדיין אין סרטונים בערוץ';
+  e.append(
+   b,
+   document.createTextNode('הוסף סרטון מהמכשיר או שידור חי מ-YouTube כדי להתחיל.')
+  );
+  grid.append(e);
+  return;
+ }
+
+ for(const v of items){
+  const isLive=v.type==='live';
+
+  const card=document.createElement('article');
+  card.className='card'+(isLive?' live-card':'');
+
+  const media=document.createElement('div');
+  media.className='media';
+
+  let video=null;
+
+  if(isLive){
+   const frame=document.createElement('iframe');
+   frame.src=v.embedUrl;
+   frame.title=v.name;
+   frame.allow='autoplay; encrypted-media; picture-in-picture; web-share';
+   frame.allowFullscreen=true;
+   frame.referrerPolicy='strict-origin-when-cross-origin';
+   media.append(frame);
+
+   const badge=document.createElement('span');
+   badge.className='live-badge';
+   badge.textContent='● LIVE';
+   media.append(badge);
+  }else{
+   video=document.createElement('video');
+   video.src=videoURL(v);
+   video.autoplay=true;
+   video.muted=true;
+   video.loop=true;
+   video.playsInline=true;
+   video.preload='metadata';
+   media.append(video);
+  }
+
+  const overlay=document.createElement('div');
+  overlay.className='overlay';
+
+  const more=document.createElement('button');
+  more.type='button';
+  more.className='more';
+  more.textContent='⋮';
+  more.setAttribute('aria-label','אפשרויות');
+
+  const menu=document.createElement('div');
+  menu.className='menu';
+
+  if(!isLive){
+   const edit=document.createElement('button');
+   edit.type='button';
+   edit.textContent='✎  עריכת פרטים';
+   edit.addEventListener('click',ev=>{
+    ev.stopPropagation();
+    menu.classList.remove('open');
+    editItem(v.id);
+   });
+   menu.append(edit);
+  }
+
+  const del=document.createElement('button');
+  del.type='button';
+  del.textContent=isLive?'⌫  הסר שידור':'⌫  מחיקת סרטון';
+  del.addEventListener('click',ev=>{
+   ev.stopPropagation();
+   menu.classList.remove('open');
+   deleteItem(v.id);
+  });
+  menu.append(del);
+
+  more.addEventListener('click',ev=>{
+   ev.stopPropagation();
+   menu.classList.toggle('open');
+  });
+
+  overlay.append(more,menu);
+
+  if(video){
+   const sound=document.createElement('button');
+   sound.type='button';
+   sound.className='sound';
+   sound.textContent='🔇 הפעל קול';
+
+   sound.addEventListener('click',ev=>{
+    ev.stopPropagation();
+    video.muted=!video.muted;
+    sound.textContent=video.muted?'🔇 הפעל קול':'🔊 השתק קול';
+    video.play().catch(()=>{});
+   });
+
+   overlay.append(sound);
+  }
+
+  media.append(overlay);
+  card.append(media);
+  grid.append(card);
+
+  if(!isLive){
+   let timer=null;
+
+   const reveal=()=>card.classList.add('controls-visible');
+
+   const start=()=>{
+    clearTimeout(timer);
+    timer=setTimeout(reveal,500);
+   };
+
+   const cancel=()=>{
+    clearTimeout(timer);
+    timer=null;
+   };
+
+   media.addEventListener('pointerdown',start);
+   media.addEventListener('pointerup',cancel);
+   media.addEventListener('pointerleave',cancel);
+   media.addEventListener('pointercancel',cancel);
+   media.addEventListener('pointermove',cancel);
+
+   media.addEventListener('contextmenu',ev=>{
+    ev.preventDefault();
+    reveal();
+    menu.classList.add('open');
+   });
+  }
+ }
+}
+
+function openModal(){
+ $('modal').classList.add('show');
+ $('modal').setAttribute('aria-hidden','false');
+ setTimeout(()=>$('name').focus(),80);
+}
+
+function closeModal(){
+ $('modal').classList.remove('show');
+ $('modal').setAttribute('aria-hidden','true');
+ $('form').reset();
+ editing=null;
+ $('modalTitle').textContent='הוסף סרטון';
+ $('file').required=true;
+ $('fileHelp').textContent='הסרטון יופיע בעמוד ויתנגן ללא קול. בלחיצה ארוכה על הסרטון יופיעו כפתורי האפשרויות והקול.';
+}
+
+$('addBtn').addEventListener('click',()=>{
+ closeModal();
+ openModal();
+});
+
+$('close').addEventListener('click',closeModal);
+
+function openLiveModal(){
+ $('liveModal').classList.add('show');
+ $('liveModal').setAttribute('aria-hidden','false');
+ setTimeout(()=>$('liveName').focus(),80);
+}
+
+function closeLiveModal(){
+ $('liveModal').classList.remove('show');
+ $('liveModal').setAttribute('aria-hidden','true');
+ $('liveForm').reset();
+}
+
+$('liveBtn').addEventListener('click',openLiveModal);
+$('liveClose').addEventListener('click',closeLiveModal);
+
+$('liveModal').addEventListener('click',ev=>{
+ if(ev.target===$('liveModal'))closeLiveModal();
+});
+
+function youtubeEmbed(raw){
+ let u;
+ try{
+  u=new URL(raw.trim());
+ }catch{
+  return null;
+ }
+
+ const host=u.hostname.toLowerCase().replace(/^www\./,'');
+
+ if(host==='youtube.com'||host==='m.youtube.com'||host==='youtube-nocookie.com'){
+  if(u.pathname==='/watch'){
+   const id=u.searchParams.get('v');
+   if(id)return 'https://www.youtube-nocookie.com/embed/'+id;
+  }
+
+  const m=u.pathname.match(/^\/(?:live|shorts|embed)\/([A-Za-z0-9_-]{11})/);
+  if(m)return 'https://www.youtube-nocookie.com/embed/'+m[1];
+ }
+
+ if(host==='youtu.be'){
+  const id=u.pathname.split('/').filter(Boolean)[0];
+  if(/^[A-Za-z0-9_-]{11}$/.test(id||'')){
+   return 'https://www.youtube-nocookie.com/embed/'+id;
+  }
+ }
+
+ if((host==='youtube.com'||host==='youtube-nocookie.com')&&u.pathname.startsWith('/embed/')){
+  return u.href;
+ }
+
+ // קישור הטמעה רשמי מאתר אחר, בתנאי שהוא HTTPS.
+ if(u.protocol==='https:' && /\/embed\//i.test(u.pathname)){
+  return u.href;
+ }
+
+ return null;
+}
+
+$('liveForm').addEventListener('submit',async ev=>{
+ ev.preventDefault();
+
+ const name=$('liveName').value.trim();
+ const embedUrl=youtubeEmbed($('liveUrl').value);
+
+ if(!name){
+  $('liveName').focus();
+  return;
+ }
+
+ if(!embedUrl){
+  alert('לא זיהיתי קישור YouTube תקין או קישור הטמעה רשמי.');
+  return;
+ }
+
+ const item={
+  id:'live-'+Date.now()+'-'+Math.random().toString(36).slice(2),
+  type:'live',
+  name,
+  embedUrl,
+  date:Date.now()
+ };
+
+ try{
+  await put(item);
+  closeLiveModal();
+  await load();
+ }catch(err){
+  alert('לא ניתן לשמור את השידור במכשיר.');
+ }
+});
+
+$('modal').addEventListener('click',ev=>{
+ if(ev.target===$('modal'))closeModal();
+});
+
+function arrangeFitGrid(){
+ if(!document.body.classList.contains('fit-mode'))return;
+
+ const grid=$('grid');
+ const n=grid.querySelectorAll('.card').length;
+
+ if(!n)return;
+
+ const gap=8;
+ const w=grid.clientWidth;
+ const h=grid.clientHeight;
+
+ if(!w||!h)return;
+
+ let best={cols:1,score:0};
+
+ for(let cols=1;cols<=n;cols++){
+  const rows=Math.ceil(n/cols);
+  const cellW=(w-gap*(cols-1))/cols;
+  const cellH=(h-gap*(rows-1))/rows;
+  const usableW=Math.min(cellW,cellH*16/9);
+  const score=usableW*Math.min(cellH,usableW*9/16);
+
+  if(score>best.score){
+   best={cols,score};
+  }
+ }
+
+ grid.style.gridTemplateColumns=`repeat(${best.cols},minmax(0,1fr))`;
+ grid.style.gridTemplateRows=`repeat(${Math.ceil(n/best.cols)},minmax(0,1fr))`;
+}
+
+$('fitBtn').addEventListener('click',()=>{
+ document.body.classList.toggle('fit-mode');
+
+ const active=document.body.classList.contains('fit-mode');
+
+ $('fitBtn').textContent=active
+  ?'⤢ חזור לתצוגה רגילה'
+  :'⛶ הצג את כל הסרטונים';
+
+ if(active){
+  requestAnimationFrame(arrangeFitGrid);
+ }
+});
+
+window.addEventListener('resize',()=>{
+ requestAnimationFrame(arrangeFitGrid);
+});
+
+function editItem(id){
+ const v=items.find(x=>x.id===id);
+ if(!v)return;
+
+ editing=id;
+ $('name').value=v.name;
+ $('desc').value=v.desc||'';
+ $('file').required=false;
+ $('fileHelp').textContent='אפשר לבחור קובץ חדש כדי להחליף את הסרטון, או להשאיר ריק כדי לשמור את הקיים.';
+ $('modalTitle').textContent='עריכת סרטון';
+ openModal();
+}
+
+async function deleteItem(id){
+ if(!confirm('למחוק את הסרטון מהערוץ?'))return;
+
+ const u=urls.get(id);
+ if(u)URL.revokeObjectURL(u);
+ urls.delete(id);
+
+ await req(
+  db.transaction(TABLE,'readwrite')
+   .objectStore(TABLE)
+   .delete(id)
+ );
+
+ await load();
+}
+
+$('form').addEventListener('submit',async ev=>{
+ ev.preventDefault();
+
+ const name=$('name').value.trim();
+
+ if(!name){
+  $('name').focus();
+  return;
+ }
+
+ const old=editing?items.find(x=>x.id===editing):null;
+ const file=$('file').files[0]||old?.file;
+
+ if(!file){
+  alert('צריך לבחור קובץ סרטון');
+  return;
+ }
+
+ const id=editing||('v-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+
+ const v={
+  id,
+  name,
+  desc:$('desc').value.trim(),
+  file,
+  date:old?.date||Date.now()
+ };
+
+ try{
+  await put(v);
+
+  const oldURL=urls.get(id);
+  if(oldURL){
+   URL.revokeObjectURL(oldURL);
+   urls.delete(id);
+  }
+
+  closeModal();
+  await load();
+ }catch(err){
+  alert('לא ניתן לשמור. ייתכן שקובץ הסרטון גדול מדי או שאין מספיק מקום אחסון במכשיר.');
+ }
+});
+
+(async()=>{
+ try{
+  db=await openDB();
+  await load();
+ }catch(err){
+  const e=document.createElement('div');
+  e.className='empty';
+  e.textContent='האחסון אינו זמין בדפדפן הזה. נסה לפתוח את הקובץ ב-Chrome.';
+  $('grid').append(e);
+ }
+})();
+</script>
+</body>
+</html>
