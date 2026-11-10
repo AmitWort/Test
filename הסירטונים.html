@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#07080d">
+<title>ערוץ מיוחד</title>
+
+<style>
+:root {
+  --bg:#07080d;
+  --card:#11141d;
+  --line:#282e3b;
+  --text:#f7f8fc;
+  --muted:#9ba4b5;
+  --red:#e50920;
+}
+
+* { box-sizing:border-box; }
+
+body {
+  margin:0;
+  min-height:100vh;
+  background:
+    radial-gradient(900px 480px at 50% -180px,rgba(229,9,32,.22),transparent 72%),
+    linear-gradient(180deg,#090b12 0%,#07080d 70%);
+  color:var(--text);
+  font-family:Arial,sans-serif;
+}
+
+header {
+  height:3px;
+  background:linear-gradient(90deg,#8f0615,#f21b35,#ff6878);
+  box-shadow:0 0 22px rgba(229,9,32,.5);
+}
+
+main {
+  max-width:1360px;
+  margin:auto;
+  padding:50px 30px 80px;
+}
+
+.brand {
+  display:inline-block;
+  color:#ff6677;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:3px;
+  padding:9px 14px;
+  border:1px solid #71303b;
+  border-radius:30px;
+  margin-bottom:24px;
+}
+
+.topline {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  flex-wrap:wrap;
+  padding-bottom:30px;
+  border-bottom:1px solid #ffffff12;
+}
+
+h1 {
+  font-size:clamp(38px,5.6vw,64px);
+  margin:0 0 12px;
+}
+
+.sub {
+  color:var(--muted);
+  font-size:16px;
+  line-height:1.8;
+}
+
+.head-actions {
+  display:flex;
+  gap:11px;
+  flex-wrap:wrap;
+}
+
+.add,.viewmode {
+  min-height:50px;
+  padding:13px 22px;
+  border-radius:13px;
+  font-size:14px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.add {
+  color:white;
+  background:linear-gradient(135deg,#ff3049,#c90020);
+  border:1px solid #ff5265;
+}
+
+.viewmode {
+  color:white;
+  background:#202532;
+  border:1px solid #3a4354;
+}
+
+.grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+  gap:22px;
+  margin-top:28px;
+}
+
+.card {
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:17px;
+  overflow:hidden;
+  box-shadow:0 8px 26px #0005;
+}
+
+.media {
+  position:relative;
+  aspect-ratio:16/9;
+  background:#05060a;
+  overflow:hidden;
+  touch-action:pan-y;
+}
+
+.media video {
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:contain;
+}
+
+.overlay {
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .16s;
+}
+
+.card.controls-visible .overlay {
+  opacity:1;
+}
+
+.more {
+  position:absolute;
+  top:12px;
+  right:12px;
+  width:43px;
+  height:43px;
+  border-radius:50%;
+  background:#111d;
+  color:white;
+  font-size:25px;
+  cursor:pointer;
+  pointer-events:auto;
+}
+
+.sound {
+  position:absolute;
+  left:13px;
+  bottom:13px;
+  padding:10px 14px;
+  border-radius:25px;
+  background:#171720ef;
+  color:white;
+  cursor:pointer;
+  pointer-events:auto;
+}
+
+.menu {
+  display:none;
+  position:absolute;
+  top:59px;
+  right:12px;
+  min-width:145px;
+  background:#171b25;
+  border:1px solid #3b4352;
+  border-radius:12px;
+  padding:5px;
+  z-index:4;
+  pointer-events:auto;
+}
+
+.menu.open { display:block; }
+
+.menu button {
+  display:block;
+  width:100%;
+  text-align:right;
+  background:transparent;
+  border:0;
+  color:white;
+  padding:11px;
+  cursor:pointer;
+}
+
+.empty {
+  grid-column:1/-1;
+  border:1px dashed #465064;
+  border-radius:18px;
+  text-align:center;
+  padding:62px 20px;
+  color:var(--muted);
+}
+
+.modal {
+  display:none;
+  position:fixed;
+  inset:0;
+  background:#000d;
+  z-index:1000;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+}
+
+.modal.show { display:flex; }
+
+.dialog {
+  width:min(540px,100%);
+  background:#1d2330;
+  border:1px solid #3a4353;
+  border-radius:20px;
+  padding:28px;
+  max-height:90dvh;
+  overflow:auto;
+}
+
+.dialog h2 { margin-top:0; }
+
+.close {
+  float:left;
+  background:none;
+  border:0;
+  color:white;
+  font-size:27px;
+  cursor:pointer;
+}
+
+label {
+  display:block;
+  margin:15px 0;
+  color:#dfe3ec;
+}
+
+input,textarea {
+  display:block;
+  width:100%;
+  margin-top:8px;
+  background:#0b0e15;
+  color:white;
+  border:1px solid #343d4e;
+  border-radius:12px;
+  padding:14px;
+  font:inherit;
+}
+
+textarea {
+  resize:vertical;
+  min-height:75px;
+}
+
+.save {
+  width:100%;
+  margin-top:14px;
+  background:linear-gradient(135deg,#ff3049,#c90020);
+  border:0;
+  color:white;
+  padding:15px;
+  border-radius:13px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.help {
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.6;
+}
+
+/* מצב הגדלה */
+.fit-mode {
+  position:fixed;
+  inset:0;
+  z-index:50;
+  background:#05060a;
+  overflow:hidden;
+  padding:7px;
+  height:100dvh;
+}
+
+.fit-mode main {
+  width:100%;
+  max-width:none;
+  height:100%;
+  min-height:0;
+  padding:7px 10px 10px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+.fit-mode .brand,
+.fit-mode .sub {
+  display:none;
+}
+
+.fit-mode .topline {
+  flex:0 0 auto;
+  margin:0;
+  min-height:38px;
+  border:0;
+}
+
+.fit-mode h1 {
+  font-size:clamp(16px,2.2vw,25px);
+  margin:0;
+}
+
+.fit-mode .head-actions button {
+  min-width:0;
+  padding:8px 13px;
+  font-size:13px;
+}
+
+.fit-mode .grid {
+  flex:1 1 auto;
+  min-height:0;
+  width:100%;
+  margin-top:8px;
+  gap:8px;
+  overflow:hidden;
+}
+
+.fit-mode .card {
+  min-width:0;
+  min-height:0;
+  height:100%;
+  border-radius:12px;
+}
+
+.fit-mode .media {
+  height:100%;
+  width:100%;
+  aspect-ratio:auto;
+}
+
+.fit-mode .media video {
+  object-fit:contain;
+}
+
+@media(max-width:700px) {
+  main { padding:30px 16px 48px; }
+
+  .head-actions {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    width:100%;
+  }
+
+  .head-actions button { width:100%; }
+
+  .grid {
+    grid-template-columns:1fr;
+    gap:16px;
+  }
+
+  .dialog { padding:22px; }
+}
+</style>
+</head>
+
+<body>
+<header></header>
+
+<main>
+  <div class="brand">VIDEO CHANNEL</div>
+
+  <div class="topline">
+    <div>
+      <h1>הסרטונים שלי</h1>
+      <p class="sub">
+        כל הסרטונים שלך במקום אחד, עם תצוגה מקדימה אוטומטית ונוחה לצפייה.
+      </p>
+    </div>
+
+    <div class="head-actions">
+      <button class="viewmode" id="fitBtn">
+        ⛶ הצג את כל הסרטונים
+      </button>
+
+      <button class="add" id="addBtn">
+        ＋ הוסף סרטון
+      </button>
+    </div>
+  </div>
+
+  <section class="grid" id="grid"></section>
+</main>
+
+<div class="modal" id="modal">
+  <div class="dialog">
+    <button class="close" id="close">×</button>
+    <h2 id="modalTitle">הוסף סרטון</h2>
+
+    <form id="form">
+      <label>
+        שם הסרטון
+        <input id="name" type="text" maxlength="90" required>
+      </label>
+
+      <label>
+        תיאור הסרטון
+        <textarea id="desc" maxlength="220"></textarea>
+      </label>
+
+      <label>
+        בחירת סרטון מהמכשיר
+        <input id="file" type="file" accept="video/*">
+      </label>
+
+      <p class="help" id="fileHelp">
+        הסרטון יופיע בעמוד ויתנגן ללא קול.
+        בלחיצה ארוכה יופיעו אפשרויות הקול והעריכה.
+      </p>
+
+      <button class="save" type="submit">
+        שמירת סרטון
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const DB='special-channel-stable-v3';
+const TABLE='videos';
+
+let db,items=[],editing=null,urls=new Map();
+
+const $=id=>document.getElementById(id);
+
+function req(r) {
+  return new Promise((resolve,reject)=>{
+    r.onsuccess=()=>resolve(r.result);
+    r.onerror=()=>reject(r.error);
+  });
+}
+
+function openDB() {
+  return new Promise((resolve,reject)=>{
+    const r=indexedDB.open(DB,1);
+
+    r.onupgradeneeded=()=>{
+      if(!r.result.objectStoreNames.contains(TABLE))
+        r.result.createObjectStore(TABLE,{keyPath:'id'});
+    };
+
+    r.onsuccess=()=>resolve(r.result);
+    r.onerror=()=>reject(r.error);
+  });
+}
+
+async function load() {
+  items=await req(
+    db.transaction(TABLE).objectStore(TABLE).getAll()
+  );
+
+  items.sort((a,b)=>b.date-a.date);
+  render();
+}
+
+async function put(v) {
+  return req(
+    db.transaction(TABLE,'readwrite')
+      .objectStore(TABLE).put(v)
+  );
+}
+
+function videoURL(v) {
+  if(!urls.has(v.id))
+    urls.set(v.id,URL.createObjectURL(v.file));
+
+  return urls.get(v.id);
+}
+
+function render() {
+  const grid=$('grid');
+  grid.replaceChildren();
+
+  if(!items.length) {
+    const e=document.createElement('div');
+    e.className='empty';
+    e.textContent='עדיין אין סרטונים בערוץ. לחץ על הוסף סרטון כדי להתחיל.';
+    grid.append(e);
+    return;
+  }
+
+  for(const v of items) {
+    const card=document.createElement('article');
+    card.className='card';
+
+    const media=document.createElement('div');
+    media.className='media';
+
+    const video=document.createElement('video');
+    video.src=videoURL(v);
+    video.autoplay=true;
+    video.muted=true;
+    video.loop=true;
+    video.playsInline=true;
+    video.preload='metadata';
+
+    media.append(video);
+
+    const overlay=document.createElement('div');
+    overlay.className='overlay';
+
+    const more=document.createElement('button');
+    more.className='more';
+    more.type='button';
+    more.textContent='⋮';
+    more.setAttribute('aria-label','אפשרויות לסרטון');
+
+    const menu=document.createElement('div');
+    menu.className='menu';
+
+    const edit=document.createElement('button');
+    edit.textContent='✎ עריכת פרטים';
+    edit.onclick=()=>editItem(v.id);
+
+    const del=document.createElement('button');
+    del.textContent='⌫ מחיקת סרטון';
+    del.onclick=()=>deleteItem(v.id);
+
+    menu.append(edit,del);
+
+    more.onclick=ev=>{
+      ev.stopPropagation();
+      menu.classList.toggle('open');
+    };
+
+    const sound=document.createElement('button');
+    sound.className='sound';
+    sound.type='button';
+    sound.textContent='🔇 הפעל קול';
+
+    sound.onclick=ev=>{
+      ev.stopPropagation();
+      video.muted=!video.muted;
+      sound.textContent=video.muted?'🔇 הפעל קול':'🔊 השתק קול';
+      video.play().catch(()=>{});
+    };
+
+    overlay.append(more,menu,sound);
+    media.append(overlay);
+    card.append(media);
+    grid.append(card);
+
+    let timer=null;
+
+    const reveal=()=>{
+      card.classList.add('controls-visible');
+    };
+
+    media.addEventListener('pointerdown',()=>{
+      clearTimeout(timer);
+      timer=setTimeout(reveal,500);
+    });
+
+    ['pointerup','pointerleave','pointercancel'].forEach(event=>{
+      media.addEventListener(event,()=>clearTimeout(timer));
+    });
+
+    media.addEventListener('contextmenu',ev=>{
+      ev.preventDefault();
+      reveal();
+      menu.classList.add('open');
+    });
+  }
+
+  if(document.body.classList.contains('fit-mode'))
+    requestAnimationFrame(arrangeFitGrid);
+}
+
+function openModal() {
+  $('modal').classList.add('show');
+  setTimeout(()=>$('name').focus(),80);
+}
+
+function closeModal() {
+  $('modal').classList.remove('show');
+  $('form').reset();
+  editing=null;
+  $('modalTitle').textContent='הוסף סרטון';
+  $('file').required=true;
+}
+
+$('addBtn').onclick=()=>{
+  closeModal();
+  openModal();
+};
+
+$('close').onclick=closeModal;
+
+$('modal').onclick=ev=>{
+  if(ev.target===$('modal')) closeModal();
+};
+
+function arrangeFitGrid() {
+  if(!document.body.classList.contains('fit-mode')) return;
+
+  const grid=$('grid');
+  const n=grid.querySelectorAll('.card').length;
+
+  if(!n) return;
+
+  const gap=8;
+  const w=grid.clientWidth;
+  const h=grid.clientHeight;
+
+  if(!w||!h) return;
+
+  let best={cols:1,score:0};
+
+  for(let cols=1;cols<=n;cols++) {
+    const rows=Math.ceil(n/cols);
+
+    const cellW=(w-gap*(cols-1))/cols;
+    const cellH=(h-gap*(rows-1))/rows;
+
+    const usableW=Math.min(cellW,cellH*16/9);
+    const score=usableW*Math.min(cellH,usableW*9/16);
+
+    if(score>best.score)
+      best={cols,score};
+  }
+
+  grid.style.gridTemplateColumns=
+    `repeat(${best.cols},minmax(0,1fr))`;
+
+  grid.style.gridTemplateRows=
+    `repeat(${Math.ceil(n/best.cols)},minmax(0,1fr))`;
+}
+
+$('fitBtn').onclick=()=>{
+  document.body.classList.toggle('fit-mode');
+
+  const active=document.body.classList.contains('fit-mode');
+
+  $('fitBtn').textContent=active
+    ?'⤢ חזור לתצוגה רגילה'
+    :'⛶ הצג את כל הסרטונים';
+
+  if(active)
+    requestAnimationFrame(arrangeFitGrid);
+};
+
+window.addEventListener('resize',()=>{
+  requestAnimationFrame(arrangeFitGrid);
+});
+
+function editItem(id) {
+  const v=items.find(x=>x.id===id);
+  if(!v) return;
+
+  editing=id;
+
+  $('name').value=v.name;
+  $('desc').value=v.desc||'';
+  $('file').required=false;
+  $('modalTitle').textContent='עריכת סרטון';
+
+  openModal();
+}
+
+async function deleteItem(id) {
+  if(!confirm('למחוק את הסרטון מהערוץ?')) return;
+
+  const u=urls.get(id);
+  if(u) URL.revokeObjectURL(u);
+
+  urls.delete(id);
+
+  await req(
+    db.transaction(TABLE,'readwrite')
+      .objectStore(TABLE).delete(id)
+  );
+
+  await load();
+}
+
+$('form').addEventListener('submit',async ev=>{
+  ev.preventDefault();
+
+  const name=$('name').value.trim();
+
+  if(!name) {
+    $('name').focus();
+    return;
+  }
+
+  const old=editing
+    ?items.find(x=>x.id===editing)
+    :null;
+
+  const file=$('file').files[0]||old?.file;
+
+  if(!file) {
+    alert('צריך לבחור קובץ סרטון');
+    return;
+  }
+
+  const id=editing||
+    ('v-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+
+  const v={
+    id,
+    name,
+    desc:$('desc').value.trim(),
+    file,
+    date:old?.date||Date.now()
+  };
+
+  try {
+    await put(v);
+
+    const oldURL=urls.get(id);
+
+    if(oldURL) {
+      URL.revokeObjectURL(oldURL);
+      urls.delete(id);
+    }
+
+    closeModal();
+    await load();
+
+  } catch(err) {
+    alert('לא ניתן לשמור. ייתכן שקובץ הסרטון גדול מדי או שאין מספיק מקום אחסון.');
+  }
+});
+
+(async()=>{
+  try {
+    db=await openDB();
+    await load();
+  } catch(err) {
+    const e=document.createElement('div');
+    e.className='empty';
+    e.textContent='האחסון אינו זמין בדפדפן הזה. נסה לפתוח את הקובץ ב-Chrome.';
+    $('grid').append(e);
+  }
+})();
+</script>
+</body>
+</html>
